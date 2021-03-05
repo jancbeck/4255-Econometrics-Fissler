@@ -1,0 +1,8 @@
+FRED Graph Observations	
+Federal Reserve Economic Data	
+Link: http://research.stlouisfed.org/fred2	
+Help: http://research.stlouisfed.org/fred2/help-faq	
+Economic Research Division	
+Federal Reserve Bank of St. Louis	
+	
+CPIAUCNS	Consumer Price Index for All Urban Consumers: All Items, Index 1982-84=100, Monthly, Not Seasonally Adjusted

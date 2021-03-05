@@ -1,0 +1,75 @@
+---
+title: "Case Study 1 - Group 1"
+author:
+- Annika Janson h11829506
+- Jan Beck h11814291
+- Franz Uchatzi h1451890
+date: "29.11.2020"
+output:
+  pdf_document: default
+  html_document:
+    df.print: paged
+  word_document: default
+header-includes:
+- \usepackage{dcolumn}
+- \renewcommand{\and}{\\}
+---
+
+
+```{r setup, include=FALSE}
+library(car)
+library(stargazer)
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+gdp <- read.csv("USGDP.csv")
+N <- nrow(gdp)
+```
+
+# 1.2 Tasks
+
+```{r, echo=FALSE}
+
+ts_gdp <- ts(gdp$NA000334Q/10^6, frequency = 4, start = c(2010, 1)) # convert to trillions
+plot(ts_gdp, main = "US GDP (Q1 2010 - Q4 2020)", xaxs="i", yaxs="i", las=1, ylab = "USD, in trillions", xlab = "Year", ylim=c(3.5, 6), xlim=c(2010,2021), frame.plot=FALSE, col="red", axes=FALSE)
+axis(side=1, at=c(2010:2021), las=2) # custom x-axis 
+axis(side=2, at=seq(3.5, 6, by=.5), las=2) # custom y-axis
+grid(NA, 5, col = "lightgray") # grid only in y-direction
+
+
+```
+In the chart above we plotted US gross domestic product (GDP) from the first quarter of 2010 till the fourth quarter of 2020 in trillions of Dollars. We can see a general positive trend up until 2020 - the year of the outbreak of the coronavirus pandemic. The minimum in the observed time frame was USD ~3.5 trillion in 2010 and the maximum was USD ~5.5 trillion in 2019. There appears to be a seasonal trend in every first quarter of the year, which is generally lower than the previous quarter.
+
+```{r, echo=FALSE}
+
+ts_gdp_log <- ts(log(gdp$NA000334Q), frequency = 4, start = c(2010, 1)) # convert to trillions
+plot(ts_gdp_log, main = "US GDP (Q1 2010 - Q4 2020)", xaxs="i", yaxs="i", las=1, ylab = "USD, logged", xlab = "Year", ylim=c(15,15.6), xlim=c(2010,2021), frame.plot=FALSE, col="red", axes=FALSE)
+axis(side=1, at=c(2010:2021), las=2) # custom x-axis 
+axis(side=2, at=seq(15, 16.6, by=.1), las=2) # custom y-axis
+grid(NA, 6, col = "lightgray") # grid only in y-direction
+
+```
+(Sehe nicht wirklich einen Unterschied - oder hab einen Fehler gemacht?)
+
+\newpage
+
+### 1.2.1
+
+### 1.2.2
+
+### 1.2.3
+
+### 1.2.4
+
+### 1.2.5
+
+### 1.2.6
+
+### 1.2.7
+
+### 1.2.8
+
+## 2 Tasks
+
+### 1
+
+### 2

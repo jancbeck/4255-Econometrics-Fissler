@@ -1,0 +1,7 @@
+Dataset name: Real Time Database (context of Euro Area Business Cycle Network)
+Frequency: Monthly
+Reference area: Euro area (moving concept in the Real Time database context)
+Adjustment indicator: Working day adjusted, not seasonally adjusted
+Real time database item: Car registration, New passenger car
+Real time database series denomination: Quantity
+URL: https://sdw.ecb.europa.eu/quickview.do?SERIES_KEY=194.RTD.M.S0.W.I_NCARS.Q
