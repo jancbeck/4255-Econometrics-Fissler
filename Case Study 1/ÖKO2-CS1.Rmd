@@ -18,6 +18,8 @@ header-includes:
 
 ```{r setup, include=FALSE}
 library(car)
+library(forecast)
+library(apsrtable)
 library(stargazer)
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
@@ -27,38 +29,106 @@ N <- nrow(gdp)
 
 # 1.2 Tasks
 
-```{r, echo=FALSE}
+### 1.2.1
 
-ts_gdp <- ts(gdp$NA000334Q/10^6, frequency = 4, start = c(2010, 1)) # convert to trillions
-plot(ts_gdp, main = "US GDP (Q1 2010 - Q4 2020)", xaxs="i", yaxs="i", las=1, ylab = "USD, in trillions", xlab = "Year", ylim=c(3.5, 6), xlim=c(2010,2021), frame.plot=FALSE, col="red", axes=FALSE)
+```{r, echo=FALSE}
+ts_gdp <- ts(gdp$NA000334Q, frequency = 4, start = c(2010, 1))
+plot(ts_gdp/10^6,  # convert to trillions
+     main = "Figure 1: US GDP (Q1 2010 - Q4 2020)", xaxs="i", yaxs="i", las=1, ylab = "USD, in trillions", xlab = "Year", ylim=c(3.5, 6), xlim=c(2010,2021), lwd=2, frame.plot=FALSE, col="red", axes=FALSE)
 axis(side=1, at=c(2010:2021), las=2) # custom x-axis 
 axis(side=2, at=seq(3.5, 6, by=.5), las=2) # custom y-axis
 grid(NA, 5, col = "lightgray") # grid only in y-direction
-
 
 ```
 In the chart above we plotted US gross domestic product (GDP) from the first quarter of 2010 till the fourth quarter of 2020 in trillions of Dollars. We can see a general positive trend up until 2020 - the year of the outbreak of the coronavirus pandemic. The minimum in the observed time frame was USD ~3.5 trillion in 2010 and the maximum was USD ~5.5 trillion in 2019. There appears to be a seasonal trend in every first quarter of the year, which is generally lower than the previous quarter.
 
 ```{r, echo=FALSE}
-
-ts_gdp_log <- ts(log(gdp$NA000334Q), frequency = 4, start = c(2010, 1)) # convert to trillions
-plot(ts_gdp_log, main = "US GDP (Q1 2010 - Q4 2020)", xaxs="i", yaxs="i", las=1, ylab = "USD, logged", xlab = "Year", ylim=c(15,15.6), xlim=c(2010,2021), frame.plot=FALSE, col="red", axes=FALSE)
-axis(side=1, at=c(2010:2021), las=2) # custom x-axis 
-axis(side=2, at=seq(15, 16.6, by=.1), las=2) # custom y-axis
-grid(NA, 6, col = "lightgray") # grid only in y-direction
+ts_gdp_d1 <- ts(diff(log(gdp$NA000334Q), lag=4, diff=1) * 100, frequency = 4, start = c(2011, 1)) # convert to growth rate in percent 
+plot(ts_gdp_d1, main = "Fig. 2: Growth Rate of US GDP at Annual Rate (Q1 2010 - Q4 2020)", xaxs="i", yaxs="i", lwd=2, ylab = "Change, in %", xlab = "Year", xlim=c(2011,2021), ylim=c(-10,6), frame.plot=FALSE, col="red", axes=FALSE)
+axis(side=1, at=c(2011:2021), las=2) # custom x-axis 
+axis(side=2, at=seq(-10, 6, by=2), las=2) # custom y-axis
+grid(NA, 8, col = "lightgray") # grid only in y-direction
 
 ```
-(Sehe nicht wirklich einen Unterschied - oder hab einen Fehler gemacht?)
-
-\newpage
-
-### 1.2.1
+For this chart we calculated the approximate annualized US GDP growth rate in percent by taking the difference between the log value of a quarter and that of the quarter one year before multiplied by 100.
 
 ### 1.2.2
 
+```{r, echo=FALSE}
+
+md1 <- tslm(ts_gdp ~ trend)
+md1_B0 <- as.vector(coef(md1)[1]) 
+md1_B1 <- as.vector(coef(md1)[2]) 
+
+md1_summary <- summary(md1)
+
+ts_gdp_sub <- window( ts_gdp, start=c(2010, 1), end=c(2019, 4) )
+md2 <- tslm(ts_gdp_sub ~ trend)
+md2_B0 <- as.vector(coef(md2)[1]) 
+md2_B1 <- as.vector(coef(md2)[2]) 
+
+md2_summary <- summary(md2)
+
+```
+
+```{r, results='asis', echo=FALSE}
+apsrtable::apsrtable(md1, md2, Sweave = TRUE, align=c("left"), col.hspace="1em", float=TRUE)
+```
+
+The intercept of Model 1 is __`r format(md1_B0)`__ and the trend coefficient __`r format(md1_B1)`__ This means that at the beginning of the timeframe (2010), we expect GDP to be at USD __`r format(md1_B0)`__ million and to grow on average USD __`r format(md1_B1)`__ million per quarter.
+
+The intercept of Model 2 is __`r format(md2_B0)`__ and the trend coefficient __`r format(md2_B1)`__ This means that at the beginning of the timeframe (2010), we expect GDP to be at USD __`r format(md2_B0)`__ million and to grow on average USD __`r format(md2_B1)`__ million per quarter.
+
+\newpage
+
+Since Model 1 included data of a historic recession towards the end, the slope of the trend coefficient is lower while the intercept is slightly larger than that of Model 2.
+In figure 3, we compared the two trend lines and we can see how the line of Model 1 "tilts" a bit downwards, because of the negative effects of 2020 on US GDP which was a clear break from the previous positive trend.
+
+As a result, the errors of Model 1 are larger compared to Model 2 and goodness of fit, R^2^ is lower in Model 1 (__`r md1_summary$r.squared`__ vs. to __`r md2_summary$r.squared`__).
+
+```{r, echo=FALSE}
+plot(ts_gdp/10^6, main = "Figure 3:  Trend lines of Model 1 and 2", xaxs="i", yaxs="i", las=1, ylab = "USD, in trillions", xlab = "Year", ylim=c(3.5, 6), xlim=c(2010,2021), lwd=2, frame.plot=FALSE, col="grey", axes=FALSE)
+axis(side=1, at=c(2010:2021), las=2) # custom x-axis 
+axis(side=2, at=seq(3.5, 6, by=.5), las=2) # custom y-axis
+grid(NA, 5, col = "lightgray") # grid only in y-direction
+lines(md1$fitted.values/10^6, col="blue")
+lines(md2$fitted.values/10^6, col="green")
+legend("bottomright", legend=c("Model 1", "Model 2"), col=c("blue", "green"), lty=1:1)
+
+```
+
 ### 1.2.3
 
+```{r, echo=FALSE}
+
+md3_p2 <- tslm(ts_gdp_sub ~ trend + I(trend^2))
+md3_p3 <- tslm(ts_gdp_sub ~ trend + I(trend^2) + I(trend^3))
+md3_p4 <- tslm(ts_gdp_sub ~ trend + I(trend^2) + I(trend^3) + I(trend^4))
+md3_p5 <- tslm(ts_gdp_sub ~ trend + I(trend^2) + I(trend^3) + I(trend^4) + I(trend^5))
+
+BIC(md2, md3_p2, md3_p3, md3_p4, md3_p5)
+
+
+
+# pick md3_p2, because BIC is lowest
+
+```
+
+We used Model 2 as a starting point and then progressively added more polynomial degrees to it. We then calculated the Bayesian information criterion (BIC) and could see that 2 polynomial degrees resulted in the lowest BIC value and therefore picked this one as our Model 3.
+
+Bonus: We could take the logarithm of GDP.
+
+$$
+\begin{aligned}
+\log Y_{t}&=\mu_{t}+s_{t}+c_{t}+u_{t}
+\end{aligned}
+$$
+
 ### 1.2.4
+
+```{r, echo=FALSE}
+plot(md3_p2$residuals, frame.plot=FALSE, col="red", ylab = "Residuals", xlab = "Year", main = "Residuals Model 3")
+```
 
 ### 1.2.5
 
