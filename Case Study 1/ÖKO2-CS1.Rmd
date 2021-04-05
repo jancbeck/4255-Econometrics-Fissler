@@ -4,7 +4,7 @@ author:
 - Annika Janson h11829506
 - Jan Beck h11814291
 - Franz Uchatzi h1451890
-date: "29.11.2020"
+date: "15.3.2021"
 output:
   pdf_document: default
   html_document:
@@ -20,7 +20,8 @@ header-includes:
 library(car)
 library(forecast)
 library(apsrtable)
-library(stargazer)
+library(lmtest)
+
 
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 gdp <- read.csv("USGDP.csv")
@@ -40,7 +41,7 @@ axis(side=2, at=seq(3.5, 6, by=.5), las=2) # custom y-axis
 grid(NA, 5, col = "lightgray") # grid only in y-direction
 
 ```
-In the chart above we plotted US gross domestic product (GDP) from the first quarter of 2010 till the fourth quarter of 2020 in trillions of Dollars. We can see a general positive trend up until 2020 - the year of the outbreak of the coronavirus pandemic. The minimum in the observed time frame was USD ~3.5 trillion in 2010 and the maximum was USD ~5.5 trillion in 2019. There appears to be a seasonal trend in every first quarter of the year, which is generally lower than the previous quarter.
+In the chart above we plotted US gross domestic product (GDP) from the first quarter of 2010 till the fourth quarter of 2020 in trillions of Dollars. We can see a general positive trend up until 2020 - the year of the outbreak of the coronavirus pandemic. The minimum in the observed time frame was USD ~3.5 trillion in 2010 and the maximum was USD ~5.5 trillion in 2019. There appears to be a seasonal component in every first quarter of the year, which is typically lower than the previous quarter.
 
 ```{r, echo=FALSE}
 ts_gdp_d1 <- ts(diff(log(gdp$NA000334Q), lag=4, diff=1) * 100, frequency = 4, start = c(2011, 1)) # convert to growth rate in percent 
@@ -72,7 +73,7 @@ md2_summary <- summary(md2)
 ```
 
 ```{r, results='asis', echo=FALSE}
-apsrtable::apsrtable(md1, md2, Sweave = TRUE, align=c("left"), col.hspace="1em", float=TRUE)
+apsrtable::apsrtable(md1, md2, Sweave = TRUE, col.hspace="1em")
 ```
 
 The intercept of Model 1 is __`r format(md1_B0)`__ and the trend coefficient __`r format(md1_B1)`__ This means that at the beginning of the timeframe (2010), we expect GDP to be at USD __`r format(md1_B0)`__ million and to grow on average USD __`r format(md1_B1)`__ million per quarter.
@@ -107,14 +108,11 @@ md3_p4 <- tslm(ts_gdp_sub ~ trend + I(trend^2) + I(trend^3) + I(trend^4))
 md3_p5 <- tslm(ts_gdp_sub ~ trend + I(trend^2) + I(trend^3) + I(trend^4) + I(trend^5))
 
 BIC(md2, md3_p2, md3_p3, md3_p4, md3_p5)
-
-
-
 # pick md3_p2, because BIC is lowest
 
 ```
 
-We used Model 2 as a starting point and then progressively added more polynomial degrees to it. We then calculated the Bayesian information criterion (BIC) and could see that 2 polynomial degrees resulted in the lowest BIC value and therefore picked this one as our Model 3.
+We used Model 2 as a starting point and then progressively added more polynomial degrees to it until we got a 5th degree polynomial model. We then calculated the Bayesian information criterion (BIC) for each and could see that 2nd degree polynomial model resulted in the lowest BIC value and therefore picked this one as our Model 3.
 
 Bonus: We could take the logarithm of GDP.
 
@@ -129,17 +127,189 @@ $$
 ```{r, echo=FALSE}
 plot(md3_p2$residuals, frame.plot=FALSE, col="red", ylab = "Residuals", xlab = "Year", main = "Residuals Model 3")
 ```
+We can see the regular seasonal fluctuations as mentioned in 1.2.1. The first quarter of a year tends to be below what trend would predict and the last one outperforms all other quarter. The 2nd and 3rd quarter are usually close together.
 
 ### 1.2.5
 
+```{r, echo=FALSE}
+
+md4 <- tslm(ts_gdp_sub ~ trend + I(trend^2) + season)
+#summary(md4)
+
+# without intercept so we see season 1
+md4_nointercept <- tslm(ts_gdp_sub ~ 0 + trend + I(trend^2) + season)
+#summary(md4_nointercept)
+```
+
+```{r, results='asis', echo=FALSE}
+apsrtable::apsrtable(md4, Sweave = TRUE, col.hspace="1em")
+```
+
+The seasonal component is probably best explained by the cold temperatures and snow in most US states during the first quarter that makes construction activities, transport and travel difficult. In contrast, the 4th quarter and its two major holidays - Thanksgiving and Christmas - boost gift buying and travel as families unite across the country.
+
 ### 1.2.6
+
+```{r, echo=FALSE}
+plot(md4$residuals, frame.plot=FALSE, col="red", ylab = "Residuals", xlab = "Year", main = "Residuals Model 4")
+```
+The pattern is now a lot less regular. We can see that the first quarter of 2012 was a lot better than what the model would predict. In contrast, the first quarter of 2017 was a lot worse. However, we can't see a clear seasonal pattern or trend.
 
 ### 1.2.7
 
+```{r, echo=FALSE}
+# Autocorrelation - plot
+plot(Acf(resid(md3_p2), plot = FALSE), frame.plot=FALSE, col="red", ylab = "ACF", xlab = "Lag", main = "Autocorrelation - Model 3", ylim=c(-0.5, 1), xlim=c(0, 16)) 
+```
+
+We can, again, see the seasonal patterns in model 3. Lags 1-3 are within the dotted blue area and therefore insignificantly autocorrelated. However, lag 4 is strongly autocorrelated. In economic terms, this means that each quarter of a year shows a similar development to the quarter the year before. As this pattern repeats year-over-year or every four legs, that autocorrelation decreases.
+
+```{r, echo=FALSE}
+# Autocorrelation plot
+plot(Acf(resid(md4), plot = FALSE), frame.plot=FALSE, col="red", ylab = "ACF", xlab = "Lag", main = "Autocorrelation - Model 4", ylim=c(-0.5, 1), xlim=c(0, 16))
+```
+
+In Model 4 we no longer see the seasonal pattern, since we have controlled for that in the model. Instead, Model 4 shows a positive autocorrelation for legs 1-4 (only the 1st one being significant). In economic terms this means that the economic activity of the current quarter of a year tells us something about the rest of the year as well. For example, if growth is strong in the current quarter, it was likely already so in the previous quarters and vice versa. However, at the 5th leg autocorellation starts to become negative and stronger again until this is reversed again at the about the 13th lag. 
+
+We speculate that this is because market participants, central banks and politics respond to economic development with some delay. For instance, after a "good year", the Federal Reserve might increase interest rates in order to avoid "running the economy hot". Those higher interest rates reduce investments and therefore reduce economic activity back to the baseline. 
+
+```{r, echo = FALSE}
+dw_md3 <- dwtest(md3_p2) #Durbin-Watson test
+
+dw_md3
+dw_md3_result <- dw_md3$statistic
+dw_md3_p <- dw_md3$p.value
+```
+
+The Durbin-Watson test for model 3 confirms the observation that there is no significant positive correlation. The result is __`r format(dw_md3_result)`__, indicating that there might be negative autocorrelation at lag 1. The p-value is __`r format(dw_md3_p)`__. Therefore we find no statistical evidence that autocorrelation is positive.
+
+```{r, echo=FALSE}
+dw_md4 <- dwtest(md4) #Durbin-Watson test
+
+dw_md4
+dw_md4_result <- dw_md4$statistic
+dw_md4_p <- dw_md4$p.value
+```
+
+The test result of model 4 shows a value of __`r format(dw_md4_result)`__ and a p-value of __`r format(dw_md4_p)`__. Therefore, the null hypothesis that there is a negative autocorrelation is rejected. The test result shows a rather strong autocorrelation with being close to 1.
+
+```{r, echo=FALSE}
+# Model 3
+# Ljung-Box test for legs 1-4
+box_md3_l1 <- Box.test(resid(md3_p2), type = "Ljung-Box", lag=1)
+box_md3_l2 <- Box.test(resid(md3_p2), type = "Ljung-Box", lag=2)
+box_md3_l3 <- Box.test(resid(md3_p2), type = "Ljung-Box", lag=3)
+box_md3_l4 <- Box.test(resid(md3_p2), type = "Ljung-Box", lag=4)
+
+# statistics
+box_md3_stat <- c(box_md3_l1$statistic,
+box_md3_l2$statistic,
+box_md3_l3$statistic,
+box_md3_l4$statistic)
+statistic <- box_md3_stat
+
+
+# p-values
+box_md3_p <- c(box_md3_l1$p.value,
+box_md3_l2$p.value,
+box_md3_l3$p.value,
+box_md3_l4$p.value)
+pvalue <- box_md3_p
+
+lag <- c(1, 2, 3, 4)
+m_md3 <- cbind(lag, statistic, pvalue)
+prmatrix(m_md3, rowlab = rep("",4))
+```
+The test results of the Ljung-Box test for model 3 shows that the null hypothesis is not rejected for the first three lags, because the p-value for each lag is greater than 0.05. However, for the fourth lag the null hypothesis is rejected and the result indicates autocorrelation.
+
+```{r, echo=FALSE}
+
+# Ljung-Box test for legs 1-4
+box_md4_l1 <- Box.test(resid(md4), type = "Ljung-Box", lag=1)
+box_md4_l2 <- Box.test(resid(md4), type = "Ljung-Box", lag=2)
+box_md4_l3 <- Box.test(resid(md4), type = "Ljung-Box", lag=3)
+box_md4_l4 <- Box.test(resid(md4), type = "Ljung-Box", lag=4)
+
+# statistics
+box_md4_stat <- c(box_md4_l1$statistic,
+box_md4_l2$statistic,
+box_md4_l3$statistic,
+box_md4_l4$statistic)
+statistic <- box_md4_stat
+
+# p-values
+box_md4_p <- c(box_md4_l1$p.value,
+box_md4_l2$p.value,
+box_md4_l3$p.value,
+box_md4_l4$p.value)
+pvalue <- box_md4_p
+
+lag <- c(1, 2, 3, 4)
+header <- c("lag", "statistic", "pvalue")
+
+m_md4 <- cbind(lag, statistic, pvalue)
+prmatrix(m_md4, rowlab = rep("",4))
+
+```
+The test results of the Ljung-Box test for model 4 shows that the null hypothesis is rejected for all four legs, suggesting that there is autocorrelation up to lag 4.
+
+Both results are supported by previous tests, i.e the interpretation of the ACF plots and the Durbin-Watson tests. Because quarterly seasonality dummy variables were only added to model 4, we can see the effects of the seasonality in the ACF plot of model 3. 
+
 ### 1.2.8
 
-## 2 Tasks
+```{r, echo=FALSE}
+fc_md2 <- forecast(md2, h=8) # forecast for eight quarters
+plot(fc_md2, main= "Forecast Model 2", ylab = "USD, in million", xlab = "Year")
+lines(md2$fitted.values, col="blue")
+```
 
-### 1
+The forecast shows the prediction for the next eight quarters. We added the fitted values for each model respectively into the forecast which is shown by the colored lines. The light blue at the top right is basically an extension of the fitted values of each model. The gray area surrounding the blue line is the prediction interval. The dark gray area around the light blue line describes a area in which the predicted values should lie within a probability of 80 percent. Analogously, predicted values should lie within the light gray area with a probability of 95 percent. 
 
-### 2
+```{r, echo=FALSE}
+fc_md3_p2 <- forecast(md3_p2, h=8) # forecast for eight quarters
+plot(fc_md3_p2, main= "Forecast Model 3", ylab = "USD, in million", xlab = "Year")
+lines(md3_p2$fitted.values, col="red")
+```
+The uncertainty (i.e. the area of probability in which the results should fall into) is highest for model 2 and decreases slightly for model 3. As model 3 is a 2nd degree polynomial model, the red line is slightly concave. 
+
+```{r, echo=FALSE}
+fc_md4 <- forecast(md4, h=8) # forecast for eight quarters
+plot(fc_md4, main= "Forecast Model 4", ylab = "USD, in million", xlab = "Year" )
+lines(md4$fitted.values, col="darkgreen")
+```
+The confidence intervals for the predicted results are  smallest for model 4. As a result, in this particular scenario, model 4 seems to offer the smallest area of uncertainty. However, choosing the correct model for forecasting can not be determined by fitting a model to previous data alone. One must consider the use case and extraordinary events ("black swans"). In our case, the model could not predict the COVID-19 global pandemic in 2020-21.
+
+\newpage
+
+## 2 Theory
+
+### 2.1
+
+Single smoothing: 
+$$
+\begin{aligned}
+\hat{\mu_t}= \frac{{Y_{t-1}}+ {Y_t}+ {Y_{t+1}}}{3}
+\end{aligned}
+$$
+Double Smoothing: 
+$$
+\begin{aligned}
+\hat{\hat{\mu_t}}= \frac{{\hat{\mu}_{t-1}}+ \hat{\mu_t}+ \hat{\mu}_{t+1}}{3}
+\end{aligned}
+$$
+Double smoothing by writing $\hat{\hat{Y_t}}$ with respect to $\hat{Y_t}'s$
+
+$$
+\begin{aligned}
+\hat{\hat{\mu_t}}= \frac{{Y_{t-1}}+{Y_t}+{Y_{t+1}}+{Y_t}+{Y_{t+1}}+{Y_{t+2}}+{Y_{t-2}}+{Y_t-1}+{Y_t}}{9}
+\end{aligned}
+$$
+which can be shown as: 
+$$
+\begin{aligned}
+\hat{\hat{\mu_t}}= \frac{{Y_{t-2}}+2{Y_{t-1}}+3{Y_t}+2{Y_{t+1}}+{Y_{t+2}}}{9}
+\end{aligned}
+$$
+
+### 2.2
+
+From our calculation  we can see that these formulas differ in terms of weighting. The single smoothing focuses on the local point $Y_t$ and the direct neighbour points $Y_t-1$ and $Y_t+1$. The double smoothing focuses on the local point too, but is splitting up its weighting on the points around and does also take into account $Y_t-2$ and $Y_t+2$. This means that the weighting on the local point is the same in single and double smoothing  but the weighting on the points around is different. In single smoothing $Y_t-1$ and $Y_t+1$ are weighted each $\frac{1}{3}$ and in double smoothing $\frac{2}{9}$, the additional points $Y_t-2$ and $Y_t+2$ are weighted each with $\frac{1}{9}$. Summarizing the weightings of the neighbour points in double smoothing ($\frac{2}{9}$ +  $\frac{1}{9}$ = $\frac{1}{3}$) we are considering the neighbour points in the same "amount" on every side  as in single smoothing, but distributed differently and on more points. As a result double smoothing is good to analyze trends in a more general way and outliers do not have such a big impact. One could say it smoothes larger variation more. A disadvantage of double smoothing could be that it does not model the seasonality of the series.
