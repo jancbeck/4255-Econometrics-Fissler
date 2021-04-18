@@ -4,7 +4,7 @@ library(lmtest)
 
 
 # Case Study Savings ------------------------------------------------------
-savings <-read.csv("../data/savings.csv")
+savings <-read.csv("data/savings.csv")
 savings <-ts(savings, start =c(1955, 1), end =c(1979, 4),frequency = 4)
 plot(savings)
 
@@ -32,7 +32,7 @@ Acf(savings)
 dev.off()
 
 # Case Study Consumer Price Index -----------------------------------------
-cpi <-read.csv("../data/cpi.csv")
+cpi <-read.csv("data/cpi.csv")
 cpi <-ts(cpi, start =c(1994, 3), end =c(2012, 3), frequency = 12)
 plot(cpi, ylab = "Index", main = "Consumer Price Index, Austria")
 
@@ -109,7 +109,7 @@ dwtest(mod_savings)
 dev.off()
 
 # ACF/Box-Ljung-Statistics demonstration ----------------------------------
-demo_acf <- read.delim("../eviews/demo_acf", header = FALSE, sep = "")
+demo_acf <- read.delim("eviews/demo_acf", header = FALSE, sep = "")
 par(mfrow =c(1, 2))
 plot(demo_acf[,1], type = "l")
 Acf(demo_acf[,1])
@@ -150,7 +150,7 @@ run_box_tests(savings)
 
 
 
-uspop <- hexView::readEViews("../eviews/uspop.wf1")
+uspop <- hexView::readEViews("eviews/uspop.wf1")
 uspop <- ts(uspop$Y, start = 1790, end = 1990, frequency = 0.1)
 plot(uspop)
 
