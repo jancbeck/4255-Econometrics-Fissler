@@ -23,7 +23,7 @@ library(apsrtable)
 library(lmtest)
 
 
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 gdp <- read.csv("USGDP.csv")
 N <- nrow(gdp)
 ```
@@ -32,7 +32,7 @@ N <- nrow(gdp)
 
 ### 1.2.1
 
-```{r, echo=FALSE}
+```{r}
 ts_gdp <- window( ts(gdp$NA000334Q, frequency = 4, start = c(2010, 1)), start=c(2010, 1), end=c(2019, 4) ) # get only subset till Q4 2019
 md1 <- tslm(ts_gdp ~ trend + season)
 md1_sum <- summary(md1)
@@ -49,13 +49,31 @@ The adjusted R^2^ is __`r md1_sum$adj.r.squared `__, the BIC is __`r md1_bic `__
 
 ### 1.2.2
 
+General formula for modeling trend and seasonality:
+$$
+\begin{aligned}
+{Y_{t} = \mu_t + \tilde{s}_t + u_t }
+\end{aligned}
+$$ 
+This general formula describes the observation $Y_{t}$ in dependence of a seasonal effect $\tilde{s}_t$ deviating from the mean $\mu_t$ which acts as a trend level plus the error term $u_t$. 
+
+General formula of Model 1: 
+$$
+\begin{aligned}
+Y_{t} = \beta_{0} + \beta_{1}t + \gamma_2 D_{t,2} + \gamma_3 D_{t,3} + \gamma_4 D_{t,4} + u_t
+\end{aligned}
+$$ 
+The general formula for model 1 consists of a linear trend $\beta_{0}$ and $\beta_{1}t$ where $\beta_{0}$ is the intercept and $\beta_{1}$ is the slope of the linear trend. The seasonal effect $\tilde{s}_t$ consists of four quarter whereas quarter 1 acts as the baseline for the subsequent quarter. Therefore only quarter 2 to 4 are described by the term $\gamma_j D_{t,j}$. Explicitly, for season 2 (i.e. second quarter) the term $\gamma_2 D_{t,2}$ consists of a dummy variable $D_{t,2}$ and the deviation of the baseline $\gamma_2$. The variable $D_{t,2}$ is 1 if $t$ is in season 2 (i.e. second quarter) and 0 otherwise. Analogously, this is true for the term $\gamma_3 D_{t,3}$ and $\gamma_4 D_{t,4}$ respectively. 
+
+
 ### 1.2.3
 
-The precise values of the 5 estimators can also be seen in the Model 1 summary table under __1.2.1__. The intercept value of __`r format(md1_coef[1]) `__ means that this is the expected value of US GDP at t=0 or Q1 2010. On average, US GDP grows by __`r format(md1_coef[2]) `__ every quarter. In a second quarter of a year, US GDP grows additionally by __`r format(md1_coef[3]) `__, __`r format(md1_coef[4]) `__ in a third and __`r format(md1_coef[5]) `__ in the last quarter of a year. The implies that the first quarter is the weakest quarter, because all seasonal variables are positive and the trend and intercept parameters act as a baseline for the first quarter.
+The intercept value of __`r format(md1_coef[1]) `__ means that this is the expected value of US GDP at t=0 or Q1 2010. On average, US GDP grows by __`r format(md1_coef[2]) `__ every quarter. In a second quarter of a year, US GDP grows additionally by __`r format(md1_coef[3]) `__, __`r format(md1_coef[4]) `__ in a third and __`r format(md1_coef[5]) `__ in the last quarter of a year. The implies that the first quarter is the weakest quarter, because all seasonal variables are positive and the trend and intercept parameters act as a baseline for the first quarter.  
+The precise values of the 5 estimators can also be seen in the Model 1 summary table under __1.2.1__. 
 
 ### 1.2.4
 
-```{r, echo=FALSE}
+```{r}
 plot(ts_gdp, main = "Fig. 1: US GDP and Model 1 fitted values", ylab = "in millions of Dollars", xlab = "Year")
 lines(md1$fitted.values, col="red")
 legend("bottomright", legend=c("US GDP", "Fitted values"), col=c("black", "red"), lty=1:1)
@@ -70,15 +88,18 @@ Assumption A2 seems violated because the values tend to fluctuate stronger in th
 
 ### 1.2.5
 
-```{r, echo=FALSE}
+```{r}
 Acf(md1$residuals)
 Pacf(md1$residuals)
 
 ```
+Model 1 shows a positive and significant autocorrelation till the fourth lag. At the fifth lag  the autocorrelation becomes negligible. At the 7th lag, the positive trend reverses to a negative trend. Generally, the absolute correlation decreases over time.
+
+In both the ACF and the partial ACF plot the autocorrelation is the same at lag 1. Looking at the partial ACF plot we can see that there is significant autocorrelation at lag 5 but not at lag 2 to 4. At the 4th lag in the PACF plot the lag is cut off. As a result we assume that the order of the process is of order 1 for the AR part and of order 4 for the MA part. 
 
 ### 1.2.6
 
-```{r, echo=FALSE}
+```{r, include=FALSE}
 order_checker <- function(Y, max.order = 3, xreg = NULL, I = 0, include.drift = FALSE){
 
   params <- list()
@@ -138,12 +159,24 @@ The ARMA model with the order of (1,4) results in the lowest value of BIC and AI
 
 ### 1.2.7
 
+General formula Model 2: 
+$$
+\begin{aligned}
+{Y_{t}  = \phi_1 Y_{t-1 }+ \theta_{1}u_{t-1} + \theta_{2}u_{t-2} + \theta_{3}u_{t-3} + \theta_{4}u_{t-4} + u_t}
+\end{aligned}
+$$ 
+The formula shows all parameters of an ARMA model with order (1,4) that we want to estimate. 
+
+Bonus: $\phi_1 Y_{t-1 }$ denotes to the AR(1) coefficient of model 2. The AR(1) coefficient $\phi_1$ corresponds to the predictor $Y_{t-1}$.
+To get $Y_t$ we need to multiply $Y_{t-1}$ with $\phi_1$. An AR(1) process is stationary if $|\phi| < 1$. If $\phi = 0$ yesterday's value has no impact on today and $Y_t = u_t$. If $\phi = 1$ the process results in a random walk.
+
 ### 1.2.8
 
-```{r, echo=FALSE}
+```{r}
 md2 <- Arima(ts_gdp, order=c(4,0,4), xreg=m, fixed=res[which.min(res$AIC),-c(1,2)], method="ML")
-
+summary(md2)
 ```
+
 
 ### 1.2.9
 
@@ -157,7 +190,7 @@ a)
 
 b) Bonus:
 
-```{r, echo=FALSE}
+```{r}
 X <- cbind(seq(from=41, to=49, by=1), rep(c(0,1,0,0), 2), rep(c(0,0,1,0), 2), rep(c(0,1,0,1), 2))
 
 plot(forecast(md2, x=X, h=8))
