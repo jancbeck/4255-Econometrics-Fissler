@@ -49,7 +49,7 @@ Pacf(Y_AR2)
 u <- rnorm(n+1)
 
 theta <- 0.9
-Y_MA1 <- rep(Y_init, n)
+Y_MA1 <- rep(0, n)
 
 for (t in 2:n){
   Y_MA1[t] <- theta * u[t - 1] + u[t]
