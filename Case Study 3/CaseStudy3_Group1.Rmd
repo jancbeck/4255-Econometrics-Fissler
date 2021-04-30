@@ -1,0 +1,129 @@
+---
+title: "Case Study 3 - Group 1"
+author:
+- Annika Janson h11829506
+- Jan Beck h11814291
+date: "10.5.2021"
+output:
+  word_document: default
+  html_document:
+    df.print: paged
+  pdf_document: default
+header-includes:
+- \usepackage{dcolumn}
+- \renewcommand{\and}{\\}
+---
+
+
+```{r setup, include=FALSE}
+#library(car)
+#library(forecast)
+#library(lmtest)
+library(MASS)
+
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+babies <- read.csv("babies.csv")
+
+```
+# 1. 1
+
+### 1.1.1 
+
+### 1.1.2 
+
+### 1.1.3
+
+### 1.1.4
+
+# 1.2
+
+### 1.2.1
+
+Linear Probability Model
+
+```{r}
+babies$race <- as.factor(babies$race)
+
+
+is.numeric(babies$race)
+is.factor(babies$race)
+
+
+LinearProbability <- lm(low ~ smoke + race + age + lwt + ptl + ht + ui + ftv, data=babies)
+
+summary(LinearProbability)
+
+```
+
+Linear Probit Model
+```{r}
+Probit <- glm(low ~ smoke + race + age + lwt +ptl + ht + ui +ftv, family = binomial(link = "probit"), data=babies)
+
+summary(Probit)
+
+
+```
+
+Linear Logit Model
+
+```{r}
+Logit <- glm(low ~ smoke + race + age + lwt +ptl + ht + ui +ftv, family = binomial(link = "logit"), data=babies)
+
+summary(Logit)
+
+```
+### 1.2.2
+
+AIC und BIC
+```{r}
+AIC1 <- AIC(LinearProbability)
+BIC1 <- BIC(LinearProbability)
+
+AIC2 <- AIC(Probit)
+BIC2 <- BIC(Probit)
+
+AIC3 <- AIC(Logit)
+BIC3 <- BIC(Logit)
+
+AIC <- c(AIC1, AIC2, AIC3)
+BIC <- c(BIC1, BIC2, BIC3)
+
+AIC
+BIC
+
+
+
+```
+Looking at AIC the Linear Logit Model is the best. This is supported by the results of the BIC as in both cases the Linear Logit Model has the smallest numbers. The numbers of AIC and BIC of the Probit Model only slightly higher to the numbers of the Linear Logit Model tho, so it seems they are nearly similar good. 
+
+### 1.2.3
+
+The results of 1.2.1 show that in the Linear Probabiity Model, the variables smoke, race2(=black), lwt, ht. In the Linear Probit Model the same values are significant, but race 3 (= others) is joining. The Linear Logit Models is similar to the Probit Model, which is inline with the results of BIP and AIC, that they are similar in explaining the response variable __low__ and that they are explaining it better than the linear Probability Model. It seems that smoking has an important effect, as it is present in all three models. It makes sense that the weight of a mother influences the weight of a baby. 
+
+### 1.2.4
+
+Predictions: 
+```{r}
+
+babies1 <- data.frame(low= 1, smoke = 0, race = as.factor(1), age = 30, lwt= 140, ptl= 0, ht= 0, ht = 1, ui = 0, ftv= 2)
+
+pred1 <- predict(LinearProbability, babies1)
+pred1
+
+pred2 <- predict(Probit, babies1, type = "response")
+pred2
+
+pred3 <- predict(Logit, babies1, type = "response")
+pred3
+
+
+
+```
+
+The highest probability predicted for that  a baby has a birth weight under 2500kg  with given 
+variables is predicted by the Linear Logit Model. With a probability of  __0.08060108__, so around __8.06%__ it is likely that a child is born with under 2500kg with these circumstances. As we observed before the Linear Probit Model fits a little bit better, so we want take a look at the predicted probabilty in this model. It is __0.07036926__, so around __7.03%__ and around 1% lower than the probability of the Linear Logit Model. 
+
+
+#2 Theory
+
