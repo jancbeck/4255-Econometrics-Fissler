@@ -5,36 +5,201 @@ author:
 - Jan Beck h11814291
 date: "10.5.2021"
 output:
-  word_document: default
+  pdf_document: default
   html_document:
     df.print: paged
-  pdf_document: default
+  word_document: default
 header-includes:
 - \usepackage{dcolumn}
 - \renewcommand{\and}{\\}
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+editor_options: 
+  markdown: 
+    wrap: 72
 ---
-
 
 ```{r setup, include=FALSE}
 #library(car)
 #library(forecast)
 #library(lmtest)
+library(stargazer)
 library(MASS)
 
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 babies <- read.csv("babies.csv")
+fish <- read.csv("fish.csv")
+fish$year <- as.factor(fish$year)
+```
+
+# 1.1
+
+```{r}
+fish_poisson1 <- glm(intensity ~  area + year + depth + length + sex + age,
+               data=fish, family = "poisson")
+
+#summary(fish_poisson1)
+
+# add non-linearity for length
+fish_poisson2 <- glm(intensity ~  area + year + depth + length + sex + age + I(length^2),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson2)
+
+# add non-linearity for age
+fish_poisson3 <- glm(intensity ~  area + year + depth + length + sex + age + I(age^2),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson3)
+
+# add non-linearity for depth
+fish_poisson4 <- glm(intensity ~  area + year + depth + length + sex + age + I(depth^2),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson4)
+
+# add interaction term for sex*length
+fish_poisson5 <- glm(intensity ~  area + year + depth + length + sex + age + I(sex*length),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson5)
+
+# add interaction term for sex*depth
+fish_poisson6 <- glm(intensity ~  area + year + depth + length + sex + age + I(sex*depth),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson6)
+
+# add interaction term for sex*age
+fish_poisson7 <- glm(intensity ~  area + year + depth + length + sex + age + I(sex*age),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson7)
+
+# combine model 4 and 6
+fish_poisson8 <- glm(intensity ~  area + year + depth + length + sex + age + I(depth^2) + I(sex*depth),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson8)
+
+# combine model 8 and 2
+fish_poisson9 <- glm(intensity ~  area + year + depth  + length + sex + age+ I(depth^2) + I(sex*depth)+ I(length^2),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson10)
+
+# combine model 9 and 3
+fish_poisson10 <- glm(intensity ~  area + year + depth + length + sex + age + I(depth^2) + I(sex*depth)+ I(length^2) + I(age^2),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson11)
+
+# combine model 10 and 3
+fish_poisson11 <- glm(intensity ~  area + year + depth + length + sex + age + I(depth^2) + I(sex*depth)+ I(length^2) + I(age^2) + I(sex*age),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson11)
+
+# combine model 11 and 3
+fish_poisson12 <- glm(intensity ~  area + year + depth + length + sex + age + I(depth^2) + I(sex*depth)+ I(length^2) + I(age^2) + I(sex*age) + I(sex*length),
+               data=fish, family = "poisson")
+
+#summary(fish_poisson12)
+
 
 ```
-# 1. 1
 
-### 1.1.1 
+### 1.1.1
 
-### 1.1.2 
+On page 2, we report the fitted Poisson model in column 1. All
+independent variables were significant at the $\alpha=0.01$ level except
+for the areas "Soroya" and "Tanafjord". The AIC of the model is
+`r format(AIC(fish_poisson1))` and the BIC is
+`r format(BIC(fish_poisson1))`.
+
+### 1.1.2
+
+First, we added quadratic terms of `length`, `age` and `depth` to model 1
+(from 1.1.1) and got models 2, 3, 4 respectively. We then added
+interaction terms of variable `sex` with `length`, `depth` and `age` and got models 5, 6 and 7 respectively. The coefficients of
+these models can be found on page 2.
+
+We then combined model 4 and 6, because these had the lowest BIC and AIC
+and got model 8 which had an even lower BIC/AIC. We then progressively
+added the interaction and non-linear terms from models 2, 3, 5, 7. These resulting models are shown on
+page 3. The AIC/BICs of our 11 models are reported in table 1.
+
+```{r, results='asis', echo=FALSE}
+
+fish_AIC <- c(AIC(fish_poisson1), AIC(fish_poisson2), AIC(fish_poisson3), AIC(fish_poisson4), AIC(fish_poisson5), AIC(fish_poisson6), AIC(fish_poisson7), AIC(fish_poisson8), AIC(fish_poisson9), AIC(fish_poisson10), AIC(fish_poisson11), AIC(fish_poisson12))
+fish_BIC <- c(BIC(fish_poisson1), BIC(fish_poisson2), BIC(fish_poisson3), BIC(fish_poisson4), BIC(fish_poisson5), BIC(fish_poisson6), BIC(fish_poisson7), BIC(fish_poisson8), BIC(fish_poisson9), BIC(fish_poisson10), BIC(fish_poisson11), BIC(fish_poisson12))
+fish_criteria <- cbind(c(1:12), fish_AIC, fish_BIC)
+
+knitr::kable(
+  fish_criteria, caption = 'Model selection criteria of our Poisson models.'
+)
+
+```
+
+```{=tex}
+\newpage
+\blandscape
+```
+```{r, results='asis', echo=FALSE}
+invisible(stargazer(fish_poisson1, fish_poisson2, fish_poisson3, fish_poisson4, fish_poisson5, fish_poisson6, fish_poisson7, header=FALSE, type='latex', title="Poisson models", align=TRUE, report="vc*", column.sep.width="0pt"))
+
+invisible(stargazer(fish_poisson1, fish_poisson8, fish_poisson9, fish_poisson10, fish_poisson11, fish_poisson12, header=FALSE, type='latex', title="Combined Poisson models", align=TRUE, report="vc*", column.labels=c("(1)", "(8)", "(9)", "(10)", "(11)", (12)), colnames=FALSE, model.numbers=FALSE))
+
+
+```
+
+\elandscape
 
 ### 1.1.3
 
+The best model we found in 1.1.2 in terms of model selection criteria had an AIC of `r format(AIC(fish_poisson11))` and BIC of `r format(BIC(fish_poisson11))` and is shown in column (12) on page 3.
+All of its predictors are statistically significant at the $\alpha=0.05$ level except for the year2001, age and age^2.
+
+We have to interpret the coefficients as the expected difference in the total log count of expected parasites of a one unit change when holding all other variables constant.
+
+**Intercept/Constant:** The expected log count of parasites of a 1 year old male fish of size 0 caught in 1999 in the "Mageroya" area at sea level. 
+
+area**soroya:** Fish caught in this area has on average slightly less parasites than in the Mageroya area c.p., because the sign of the coefficient is negative.
+
+area**tanafjord:** Fish caught in this area has on average less parasites than in the Mageroya area c.p., because the sign of the coefficient is negative.
+
+area**varangerfjord:** Fish caught in this area has on average more parasites than in the Mageroya area c.p., because the sign of the coefficient is positive.
+
+**year2000/year2001:** Because of the signs of these coefficients, all else equal, the expected log count of number of parasites is higher/lower in 2000/2001 than in 1999.
+
+**depth + I(depth\^2):** The expected log count of parasites increases quadratically with the depth in which a fish is caught up to a certain depth before it decreases (the apex lies within the sample values), c.p.
+
+**length+ I(length\^2):** The expected log count of parasites decreases quadratically with the length of a fish (the apex lies outside the sample values), c.p.
+
+**age + I(age^2):** All else equal, the average log count of number of parasites increases quadratically with age. This could be because older fish have less resistance towards them and/or they have accumulated more during their lifetime.
+
+**sex:** Because this coefficient is positive, all else equal, we expect a higher log count of number of parasites for female fish.
+
+**I(sex * depth) + I(sex * age) + I(sex * length):** For female fish, we add this parameter to the corresponding linear coefficient. If the resulting value is negative, the apex quadratic function and its apex move to right. If it's positive, they move to the left. This can change the interpretation of these coefficients, because now the apex could fall within the sample space.
+
 ### 1.1.4
+
+```{r}
+fish_nb <- glm.nb(intensity ~  area + year + depth + length + sex + age + I(depth^2) + I(sex*depth)+ I(length^2) + I(age^2) + I(sex*age) + I(sex*length), data=fish)
+summary(fish_nb)
+
+```
+
+-   AIC/BIC of NB model much smaller
+-   evidence of overdispersion V(Y) \> E(Y)
+-   true: `r var(fish$intensity)` \> `r mean(fish$intensity)`
+-   $\mathbb{V}(Y)=\mathbb{E}(Y)\left(1+\eta^{2} \mathbb{E}(Y)\right)$
+-   true variance:
+    `r mean(fish$intensity) * (1+fish_nb$theta^2*mean(fish$intensity))`
+
+
 
 # 1.2
 
@@ -56,19 +221,24 @@ summary(LinearProbability)
 
 ```
 
-Linear Probit Model
+
+Binary Probit Model
 ```{r}
-Probit <- glm(low ~ smoke + race + age + lwt +ptl + ht + ui +ftv, family = binomial(link = "probit"), data=babies)
+probit_mod <- glm(low ~ smoke + race + age + lwt +ptl + ht + ui +ftv, family = binomial(link = "probit"), data=babies)
 
 summary(Probit)
 
+median(babies$lwt)
+
+is.factor(babies$smoke)
 
 ```
 
-Linear Logit Model
+
+Binary Logit Model
 
 ```{r}
-Logit <- glm(low ~ smoke + race + age + lwt +ptl + ht + ui +ftv, family = binomial(link = "logit"), data=babies)
+logit_mod <- glm(low ~ smoke + race + age + lwt +ptl + ht + ui +ftv, family = binomial(link = "logit"), data=babies)
 
 summary(Logit)
 
@@ -80,11 +250,11 @@ AIC und BIC
 AIC1 <- AIC(LinearProbability)
 BIC1 <- BIC(LinearProbability)
 
-AIC2 <- AIC(Probit)
-BIC2 <- BIC(Probit)
+AIC2 <- AIC(probit_mod)
+BIC2 <- BIC(probit_mod)
 
-AIC3 <- AIC(Logit)
-BIC3 <- BIC(Logit)
+AIC3 <- AIC(logit_mod)
+BIC3 <- BIC(logit_mod)
 
 AIC <- c(AIC1, AIC2, AIC3)
 BIC <- c(BIC1, BIC2, BIC3)
@@ -95,11 +265,223 @@ BIC
 
 
 ```
-Looking at AIC the Linear Logit Model is the best. This is supported by the results of the BIC as in both cases the Linear Logit Model has the smallest numbers. The numbers of AIC and BIC of the Probit Model only slightly higher to the numbers of the Linear Logit Model tho, so it seems they are nearly similar good. 
+Looking at AIC the Binary Logit Model is the best. This is supported by the results of the BIC as in both cases the Binary Logit Model has the smallest numbers. The numbers of AIC and BIC of the Probit Model are only slightly higher to the numbers of the  Logit Model tho, so it seems they are nearly similar good. 
 
 ### 1.2.3
 
-The results of 1.2.1 show that in the Linear Probabiity Model, the variables smoke, race2(=black), lwt, ht. In the Linear Probit Model the same values are significant, but race 3 (= others) is joining. The Linear Logit Models is similar to the Probit Model, which is inline with the results of BIP and AIC, that they are similar in explaining the response variable __low__ and that they are explaining it better than the linear Probability Model. It seems that smoking has an important effect, as it is present in all three models. It makes sense that the weight of a mother influences the weight of a baby. 
+```{r}
+explore_params <- function(mod, param, grouping_param, n = 100, silent = FALSE){
+  
+  # Its just nicer for some things
+ 
+  
+  # Extract covariates from model object
+  covariates <- mod$data[, names(mod$data) %in% attr(mod$terms, "term.labels")]
+  
+  # Differentiate between dummy and non-dummy variables
+  # It essentially just checks whether all values are either 0 or 1
+  is.dummy <- apply(covariates, 2, function(x){
+    all(x %in% c(0, 1))
+  })
+  
+  # The grouping variable cant be continuous
+  if (missing(grouping_param) == FALSE && is.dummy[grouping_param] == FALSE){
+    stop("grouping_param has to be a dummy variable!")
+  }
+  
+  # Dummy variables and continuous variables produce different plots, have to differentiate
+  if (is.dummy[param]){
+    # Generate synthetic observations for dummy = 0 and dummy = 1
+    neg_synth <- pos_synth <- covariates
+    
+    # Overwrite all dummy variables with 0 for negative synth 
+    neg_synth[,param] <- 0
+    
+    # Overwrite all dummy variables with 1 for positive synth
+    pos_synth[, param] <- 1
+    
+    # Predict average probability of unemployment over synthetic observations
+    pos_pred <- mean(predict(mod, pos_synth, type = "response"))
+    neg_pred <- mean(predict(mod, neg_synth, type = "response"))
+    
+    # This is just stuff that ggplot2 wants
+    data <- data.frame(Probability = c(neg_pred, pos_pred), val = as.factor(c(0, 1)))
+    names(data)[2] <- param
+    
+    p <- ggplot(data, aes_string(y = "Probability", x = 0, fill = param)) +
+      geom_bar(stat = "identity", position="dodge") + 
+      ylab("Average Probability") +
+      theme_bw() + 
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank()) +
+      ylim(c(0, 1)) +
+      annotate("text", label = paste0("Difference: ", round(100*(pos_pred - neg_pred), 2), "%"),  
+               x = -0.25, y = 0.95, hjust = 0.5)
+    
+  } else {
+    # Get range of predictor variable
+    par_range <- range(covariates[, param])
+    
+    # Create n evenly spaced values in the range of the param
+    seq <- seq(from = par_range[1], to = par_range[2], length.out = n)
+    
+    # Loop over all points in seq and create synthetic observations
+    avg_probs <- rep(NA, length(seq))
+    
+    if (missing(grouping_param)){
+      avg_probs2 <- NULL
+    } else {
+      avg_probs2 <- rep(NA, length(seq))
+    }
+    
+    
+    for (i in 1:length(seq)){
+      curr_dat <- covariates
+      
+      # Replace all values of param with current value to create synthetic observations
+      curr_dat[, param] <- seq[i]
+      
+      # Create two seperate sets of synthetic observations if grouping_param was provided
+      # This lets the user look at the effect of covariates on different groups
+      if (missing(grouping_param) == FALSE){
+        curr_dat[, grouping_param] <- 0
+        curr_dat2 <- curr_dat
+        curr_dat2[, grouping_param] <- 1
+        
+        avg_probs2[i] <- mean(predict(mod, curr_dat2, type = "response"))
+      }
+      
+      # Calculate average probability for all synthetic observations at current value of param
+      avg_probs[i] <- mean(predict(mod, curr_dat, type = "response"))
+    }
+    
+    # Create data frame for ggplot again
+    probs <- c(avg_probs, avg_probs2)
+    data <- data.frame(Probability = probs, 
+                       val = rep(seq, length.out = length(probs)),
+                       group = as.factor(rep(0:1, each = length(seq))[1:length(probs)]))
+    
+    names(data)[2] <- param
+    if (missing(grouping_param) == FALSE){
+      names(data)[3] <- grouping_param
+    }
+    
+    
+    p <- ggplot(data)
+    if (missing(grouping_param)) {
+      p <- p + geom_line(lwd = 1.2, mapping = aes_string(x = param, y = "Probability"))
+    } else {
+      p <- p + geom_line(lwd = 1.2, mapping = aes_string(x = param, y = "Probability", color = grouping_param)) 
+    }
+    
+    coord_x <- min(min(data[, param]))
+    coord_y <- 0.95
+    if (missing(grouping_param)){
+      annot <- paste0("Max difference: ", round(100*(max(avg_probs) - min(avg_probs)), 2), "%")
+      
+    } else {
+      annot <- c(paste0("Max difference, ", grouping_param, " = 0: ", round(100*(max(avg_probs) - min(avg_probs)), 2), "%"),
+                      paste0("Max difference, ", grouping_param, " = 1: ", round(100*(max(avg_probs2) - min(avg_probs2)), 2), "%"))
+      
+      coord_y <- c(coord_y, 0.95*coord_y)
+      
+    }
+    
+    p <- p + theme_bw() + 
+      ylim(c(0, 1)) + 
+      ylab("Average Probability") + 
+      annotate("text", label = annot, 
+               x = coord_x,
+               y = coord_y, hjust = 0, vjust = 0.5)     
+  }
+  if (silent == FALSE){
+    print(p)
+  }
+  return(p)
+}
+
+```
+
+
+Linear Probability Model:
+
+The coefficient of $\beta_0$ shows us that the conditional probability the birth weight of a baby is under 2500g is approximately __51,03%__ holding all other variables constant. 
+Holding all other variables constant, the other coefficients can be interpreted as followed (significance level = 5%):
+
+smoke: If someone smokes the probability that the birth weight is under 2500g is increasing by approximately __15,99%__ c.p.
+race 2: If someone is of black colour the probability that the birth weight is under 2500g is increasing by approximately __22,15%__ (in comparison to someone of white colour) c.p.
+race 3: not significant
+age: age seems to be not significant
+lwt: With increasing weight (lbs) of mother at last menstrual period by 1 the probability that the birth weight is under 2500g is decreasing by __0.25%__ c.p.
+ptl: not significant
+ht: If hypertension occurred in the past the probability that the birth weight is under 2500g is increasing by approximately __36,62%__ c.p
+ui: not significant
+ftv: not significant
+
+```{r}
+pnorm(0.270956)
+plogis(0.477788 )
+
+
+```
+Logit/ Probit model 
+
+Conditional probability that the birth weight of a baby is under 2500g is approximately is for both models around 61%. 
+
+Only __age__ and __lwt__ have negative signs. That means if age increases by 1 year or weight (lbs) of mother at last menstrual period increases by __1 lbs__ the probability that the birth weight of a baby is under 2500g decreases c.p.. Age is not significant tho. For all other parameters the probability increases c.p. 
+
+Probit/ Logit Model: 
+
+Significant Parameters: 
+```{r}
+
+# Like this!
+explore_params(probit_mod, "smoke")
+explore_params(logit_mod, "smoke")
+explore_params(logit_mod, "smoke")
+
+# Binary models can produce different effects for effects for different groups, even without interactions
+# This is a consequence of the non-linearity of the model
+explore_params(probit_mod, "smoke", "ui")
+
+# Compare the models
+prob_smoke <- explore_params(probit_mod, "smoke", silent = TRUE) + ggtitle("Probit model")
+logit_smoke <- explore_params(logit_mod, "smoke", silent = TRUE) + ggtitle("Logit model")
+gridExtra::grid.arrange(prob_smoke, logit_smoke, ncol = 2)
+
+
+prob_race <- explore_params(probit_mod, "race", silent = TRUE) + ggtitle("Probit model")
+logit_race <- explore_params(logit_mod, "race", silent = TRUE) + ggtitle("Logit model")
+gridExtra::grid.arrange(prob_race, logit_race, ncol = 2)
+
+
+prob_lwt <- explore_params(probit_mod, "lwt", silent = TRUE) + ggtitle("Probit model")
+logit_lwt <- explore_params(logit_mod, "lwt", silent = TRUE) + ggtitle("Logit model")
+gridExtra::grid.arrange(prob_lwt, logit_lwt, ncol = 2)
+
+
+prob_ht <- explore_params(probit_mod, "ht", silent = TRUE) + ggtitle("Probit model")
+logit_ht <- explore_params(logit_mod, "ht", silent = TRUE) + ggtitle("Logit model")
+gridExtra::grid.arrange(prob_ht, logit_ht, ncol = 2)
+
+
+
+
+
+
+
+
+
+
+```
+We observe a non linear effect that in both models the probability that the birth weight of a baby is under 2500g is decreasing with increasing weight (lbs) of mother at last menstrual period averaging over all of the other parameters. The difference between the person with the lowest and the highest person was in average around __37%__. 
+
+We calculated the average probability for different type of women and can observe that the average difference in probability between a woman who is smoking and a woman who does not smoke is about __17%__. The probability that the birth weight of a baby is under 2500g is higher for a woman who is smoking.
+
+We again calculated the average probability for different type of women and can observe that the average difference in probability between a woman with a history of hypertension and a woman without is around __37%__ for both models. While it is higher for woman with a history of hypertension that the birth weight of a baby is under 2500g.
+
+
 
 ### 1.2.4
 
@@ -111,19 +493,20 @@ babies1 <- data.frame(low= 1, smoke = 0, race = as.factor(1), age = 30, lwt= 140
 pred1 <- predict(LinearProbability, babies1)
 pred1
 
-pred2 <- predict(Probit, babies1, type = "response")
+
+pred2 <- predict(probit_mod, babies1, type = "response")
 pred2
 
-pred3 <- predict(Logit, babies1, type = "response")
+pred3 <- predict(logit_mod, babies1, type = "response")
 pred3
 
 
 
 ```
 
-The highest probability predicted for that  a baby has a birth weight under 2500kg  with given 
-variables is predicted by the Linear Logit Model. With a probability of  __0.08060108__, so around __8.06%__ it is likely that a child is born with under 2500kg with these circumstances. As we observed before the Linear Probit Model fits a little bit better, so we want take a look at the predicted probabilty in this model. It is __0.07036926__, so around __7.03%__ and around 1% lower than the probability of the Linear Logit Model. 
+The highest probability predicted  that a baby has a birth weight under 2500kg with the given 
+variables is predicted by the Binary Logit Model. With a probability of __0.08060108__, so around __8.06%__ a child is born with under 2500kg. As we observed before the Binary Probit Model fits a little bit better, so we want take a look at the predicted probability in this model. It is __0.07036926__, so around __7.03%__ and around 1% lower than the probability of the Binary Logit Model.
+
 
 
 #2 Theory
-
