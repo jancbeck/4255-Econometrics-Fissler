@@ -1,0 +1,133 @@
+---
+title: "Econometrics II, 2021 summer term, Final"
+author:
+- Jan Beck h11814291
+date: "19 May 2021"
+output:
+  pdf_document: default
+header-includes:
+- \usepackage{dcolumn}
+- \renewcommand{\and}{\\}
+---
+
+```{r setup, include=FALSE}
+library(car)
+library(forecast)
+library(ggplot2)
+library(stargazer)
+library(MASS)
+
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+# **Count Data**
+
+1)  $\mathbb{E}(Y|\boldsymbol{X})=\exp(\beta_{0}+\beta_{1} X_{1}+\beta_{2} X_{2}+\beta_{3} X_{3}+\beta_{4} X_{4}+\beta_{5} X_{5})$
+
+2)  In the Poisson model, the log count of the expected number of published articles increases by 2.6% for every article published by the mentor, c.p.. In the NB model the log count of the expected number of published articles increases by 2.9% for every article published by the mentor, c.p..
+
+3)  In the Poisson model, the variable married is significant at the 5%-level. In the NB model it is not significant at the 5%-level.
+
+4)  
+
+```{r}
+woman <- exp(0.305-0.225*1+0.155*0-0.185*0+0.013*3+0.026*35)
+woman
+```
+
+5)  
+
+```{r}
+    abs(exp(0.305-0.225*0+0.155*0-0.185*0+0.013*3+0.026*35)-woman)
+```
+
+6)  I would prefer the NB model, because it does not assume, like the Poisson model, that mean and variance are equal. As far as I know, publishing in academia is very widely dispersed i.e. there are some who publish a lot more than others which might lead to overdispersion in the data. The NB model addresses this problem by allowing for such cases.
+
+7)  Both the AIC and BIC are smaller for the NB model. This suggests that the NB model fits the data better, because both AIC and BIC include SSR in their formular and therefore prefer models that have less errors (the number of predictors here are the same for both models and therefore less relevant).
+
+# **Time Series Analysis**
+
+## 2.1
+
+$Y_t$ peaks around 1973, while $X_t$ peaks towards the end of the observed time interval. $Y_t$ does not exhibit a clear trend perhaps except for a mild positive one from 1970 till 1974, after which it remains relatively stable and then drops slightly after the introduction of the law. $X_t$ on the other hand has a clear positive trend over the entire time horizon. Both time series exhibit strong yearly seasonality. However, it appears as if the two are somewhat anti-cyclical i.e. when $X_t$ has a local maximum, $Y_t$ seems to be in a local minimum (but it is really hard to say at the low resolution). $X_t$ seems unaffected by the introduction of the new law. As both time series exhibit clear seasonality, I'd say they are non-stationary, because it violats the assumption that autocovariance function $Cov(Y_t,Y_s)$ depends only on the lag $h = t-s$.
+
+## **2.2 Time Series Regression**
+
+1)  a) The estimates are
+
+    $$
+    \beta_0=2092.887\quad\beta_1=-0.699\quad\beta_2=-3873.595\quad\beta_3=-0.022\quad\beta_4=20.118
+    $$
+
+    b) All else equal, the introduction of the law seems to have have decreased dead drivers on average by -3873.595. However, we need to interpret the coefficient in combination with the interaction term trend:law which implies that for each year drivers who die in traffic are expected to increase by 20.118 on average. This suggests that given our model assumptions were true that the negative trend in deaths has actually reversed after the introduction of the law, because trend alone is only -0.699. If we projected into the future, we might even expect deaths to return to levels before the introduction of the law or higher.
+
+    c) Since we are dealing with timeseries data, it is likely that our assumption of non-correlation between $Y_t$ is violated. Therefore we can not draw conclusions from the model.
+
+2)  In the ACF we see clues that our assumption, that the errors are uncorrelated is violated as there seems to be significant autocorrelation around lag 12 and 24. In the plot of the squared residuals we can see that the assumption of constant variance in the residuals is violated because there's a strong spike between 1970 and 1975. I'd also argue that the last 5 years seem to exhibit less variance in errors than the time period before.
+
+## 2.3
+
+1)  W_t measures the difference from one time period to the next i.e. month over month. Z_t measures the difference year-over-year.
+
+2)  Both series now have their trend removed. However, W_t still shows seasonality and therefore violates stationary assumptions. Z_t on the otherhand now appears stationary with only autocorrelation at lag 1.
+
+3)  The ar1 coefficient is 0.355 and means that the change in deaths in Y_t is correlated with Y_t-1 (one year before) by that amount. It is highly significant at the 5% level. The estimate for the intercept suggests that the mean of Z is about -2.5% which is the amount deaths are decreasing on average each month.
+
+4)  
+```{r}
+forecast <- 0.355*(1494-1456-2.500)+2.500
+forecast
+# Bonus
+0.355*(forecast-1057-2.500)+2.500
+```
+
+
+5)  
+
+6)  
+
+
+
+# 3 True or false?
+
+1)  FALSE. For a process to be stationary, its (marginal) mean must be constant over time $\mathbb{E}\left(Y_{t}\right)=\mu_{t}=\mu$.
+
+2)  FALSE. The Box-Ljung-Statistic aggregates all autocorrelations $r_1,...,r_h$ up to lag h. As long as a single one *r* is significantly different from zero, the null is rejected.
+
+3)  FALSE. $\phi_2$ could by greater than 1 and
+
+4)  FALSE. $Y_{t-2}$ affects $Y_{t}$ only indirectly through $Y_{t-1}$. If the latter remains fixed, then we expect no direct effect on $Y_{t}$.
+
+5)  
+
+6)  TRUE. The process is stationary because $\phi$ \< 0 (and the variance constant) and its mean $\mu$ therefore equal to 0 (slide 68). Taking the expectation on both sides
+
+    $$
+    \mathbb{E}\left(Y_{t}\right)=\phi \mathbb{E}\left(Y_{t-1}\right)+\mathbb{E}\left(1\right)+\mathbb{E}\left(u_{t}\right)
+    $$
+
+    Due to stationarity $\mu=\mathbb{E}\left(Y_{t}\right)=\mathbb{E}\left(Y_{t-1}\right)$, $\mathbb{E}\left(1\right)=1$ and $\mathbb{E}\left(u_{t}\right)=0$. Therefore
+
+    $$
+    \mu=0.75 \mu+1 \Rightarrow \mu(1-0.75)=1 \Rightarrow \mu=4
+    $$
+
+7)  FALSE. The model describes a random walk with drift where $U_t$ is modeled as a stationary AR(1) process.
+
+8)  FALSE. In the Poisson model the variance is equal to the mean.
+
+9)  FALSE. It takes on a very large **negative** value. This is because the odds ratio is defined as
+
+    $$
+    \frac{\mathbb{P}(Y=1)}{\mathbb{P}(Y=0)}=\frac{\mathbb{P}(Y=1)}{1-\mathbb{P}(Y=1)}
+    $$
+
+    If $\mathbb{P}(Y=0)$ approaches 1, the numerator necessarily approaches 0 and the overall expression approaches 0. The log of a number \<0 approaches negative infinity.
+
+10) TRUE. The ratio of two partial effects in a Binary model (here: Probit) is
+
+    $$
+    \frac{\beta_{j}}{\beta_{k}}=\frac{\partial \mathbb{P}\left(Y=1 \mid X_{j}=x_{j}, \cdot\right) / \partial x_{j}}{\partial \mathbb{P}\left(Y=1 \mid X_{k}=x_{k}, \cdot\right) / \partial x_{k}}.
+    $$
+
+    In our case beta1 = 3, beta2=4. Therefore 4/3=1.33333...

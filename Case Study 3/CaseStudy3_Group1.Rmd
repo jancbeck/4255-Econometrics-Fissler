@@ -23,7 +23,7 @@ editor_options:
 ```{r setup, include=FALSE}
 #library(car)
 #library(forecast)
-#library(lmtest)
+library(ggplot2)
 library(stargazer)
 library(MASS)
 
@@ -147,11 +147,11 @@ knitr::kable(
 \newpage
 \blandscape
 ```
+
 ```{r, results='asis', echo=FALSE}
 invisible(stargazer(fish_poisson1, fish_poisson2, fish_poisson3, fish_poisson4, fish_poisson5, fish_poisson6, fish_poisson7, header=FALSE, type='latex', title="Poisson models", align=TRUE, report="vc*", column.sep.width="0pt"))
 
 invisible(stargazer(fish_poisson1, fish_poisson8, fish_poisson9, fish_poisson10, fish_poisson11, fish_poisson12, header=FALSE, type='latex', title="Combined Poisson models", align=TRUE, report="vc*", column.labels=c("(1)", "(8)", "(9)", "(10)", "(11)", (12)), colnames=FALSE, model.numbers=FALSE))
-
 
 ```
 
@@ -162,7 +162,10 @@ invisible(stargazer(fish_poisson1, fish_poisson8, fish_poisson9, fish_poisson10,
 The best model we found in 1.1.2 in terms of model selection criteria had an AIC of `r format(AIC(fish_poisson11))` and BIC of `r format(BIC(fish_poisson11))` and is shown in column (12) on page 3.
 All of its predictors are statistically significant at the $\alpha=0.05$ level except for the year2001, age and age^2.
 
-We have to interpret the coefficients as the expected difference in the total log count of expected parasites of a one unit change when holding all other variables constant.
+We interpret the coefficients as the expected difference in the total log count of expected parasites of a one unit change when holding all other variables constant. Or in mathematical terms:
+
+$$\frac{\mathbb{E}\left(Y \mid X_{j}=1, \ldots\right)-\mathbb{E}\left(Y \mid X_{j}=0, \ldots\right)}{\mathbb{E}\left(Y \mid X_{j}=0, \ldots\right)}=e^{\beta_{j}}-1\approx\beta_{j}$$
+For small $\beta_j$, the relative change is roughly equal to $100*\beta_j$ percent.
 
 **Intercept/Constant:** The expected log count of parasites of a 1 year old male fish of size 0 caught in 1999 in the "Mageroya" area at sea level. 
 
@@ -182,90 +185,93 @@ area**varangerfjord:** Fish caught in this area has on average more parasites th
 
 **sex:** Because this coefficient is positive, all else equal, we expect a higher log count of number of parasites for female fish.
 
-**I(sex * depth) + I(sex * age) + I(sex * length):** For female fish, we add this parameter to the corresponding linear coefficient. If the resulting value is negative, the apex quadratic function and its apex move to right. If it's positive, they move to the left. This can change the interpretation of these coefficients, because now the apex could fall within the sample space.
+**I(sex * depth) + I(sex * age) + I(sex * length):** For female fish, we add this parameter to the corresponding linear coefficient i.e. $\beta_{depth} \Delta_{x_{depth}}+\beta_{} \Delta_{x_{1}} x_{2}$. If the resulting value is negative, the apex quadratic function and its apex move to right. If it's positive, they move to the left. This can change the interpretation of these coefficients, because now the apex could fall within the sample space.
+
+\newpage
 
 ### 1.1.4
 
 ```{r}
-fish_nb <- glm.nb(intensity ~  area + year + depth + length + sex + age + I(depth^2) + I(sex*depth)+ I(length^2) + I(age^2) + I(sex*age) + I(sex*length), data=fish)
+fish_nb <- glm.nb(intensity ~  area + year + depth + length + sex + age + I(depth^2) + I(length^2) + I(age^2) + I(sex*age) + I(sex*length) + I(sex*depth), data=fish)
 summary(fish_nb)
-
 ```
 
--   AIC/BIC of NB model much smaller
--   evidence of overdispersion V(Y) \> E(Y)
--   true: `r var(fish$intensity)` \> `r mean(fish$intensity)`
--   $\mathbb{V}(Y)=\mathbb{E}(Y)\left(1+\eta^{2} \mathbb{E}(Y)\right)$
--   true variance:
-    `r mean(fish$intensity) * (1+fish_nb$theta^2*mean(fish$intensity))`
+\newpage
+
+The resulting AIC of our negative binomial model (NB) is `r format(AIC(fish_nb))` and the BIC `r format(AIC(fish_nb))`. That is a lot smaller than the AIC `r format(AIC(fish_poisson11))` and BIC `r format(BIC(fish_poisson11))` of our chosen Poisson model. The fact that the model selection criteria prefer the NB model so strongly, suggests that the assumption for our Poisson model that
+
+$$\mathbb{E}(Y)=\mathbb{V}(Y)=\mu$$
+
+is violated and that actually
+
+$$\mathbb{V}(Y)>\mathbb{E}(Y).$$
 
 
+We compute the variance and mean to confirm this:
+
+```{r, echo=TRUE}
+var(fish$intensity)
+mean(fish$intensity)
+```
+
+The distribution is overdispersed and could have arisen from the negative binomial distribution:
+
+$$\mathbb{V}(Y)=\mathbb{E}(Y)\left(1+\eta^{2} \mathbb{E}(Y)\right)$$
+\newpage
 
 # 1.2
 
 ### 1.2.1
 
-Linear Probability Model
+```{r, include=FALSE}
 
-```{r}
+# Linear Probability Model
 babies$race <- as.factor(babies$race)
-
 
 is.numeric(babies$race)
 is.factor(babies$race)
-
 
 LinearProbability <- lm(low ~ smoke + race + age + lwt + ptl + ht + ui + ftv, data=babies)
 
 summary(LinearProbability)
 
-```
-
-
-Binary Probit Model
-```{r}
+# Binary Probit Model
 probit_mod <- glm(low ~ smoke + race + age + lwt +ptl + ht + ui +ftv, family = binomial(link = "probit"), data=babies)
 
-summary(Probit)
+summary(probit_mod)
 
 median(babies$lwt)
-
 is.factor(babies$smoke)
 
-```
-
-
-Binary Logit Model
-
-```{r}
+# Binary Logit Model
 logit_mod <- glm(low ~ smoke + race + age + lwt +ptl + ht + ui +ftv, family = binomial(link = "logit"), data=babies)
 
-summary(Logit)
+summary(logit_mod)
 
 ```
+
+We report our Linear Probability Model (OLS), Binary Probit and Binary Logit models in table 4.
+
+```{r, results='asis', echo=FALSE}
+invisible(stargazer(LinearProbability, probit_mod, logit_mod, header=FALSE, type='latex', title="'Babies' models", align=TRUE, model.names=TRUE))
+```
+
+
 ### 1.2.2
 
-AIC und BIC
-```{r}
-AIC1 <- AIC(LinearProbability)
-BIC1 <- BIC(LinearProbability)
+```{r, results='asis', echo=FALSE}
 
-AIC2 <- AIC(probit_mod)
-BIC2 <- BIC(probit_mod)
+babies_AIC <- c(format(AIC(LinearProbability)), format(AIC(probit_mod)), format(AIC(logit_mod)))
+babies_BIC <- c(format(BIC(LinearProbability)), format(BIC(probit_mod)), format(BIC(logit_mod)))
+babies_criteria <- cbind(c("Linear Probability", "Binary Probit", "Binary Logit"), babies_AIC, babies_BIC)
 
-AIC3 <- AIC(logit_mod)
-BIC3 <- BIC(logit_mod)
-
-AIC <- c(AIC1, AIC2, AIC3)
-BIC <- c(BIC1, BIC2, BIC3)
-
-AIC
-BIC
-
-
+knitr::kable(
+  babies_criteria, caption = "Model selection criteria of our 'Babies' models."
+)
 
 ```
-Looking at AIC the Binary Logit Model is the best. This is supported by the results of the BIC as in both cases the Binary Logit Model has the smallest numbers. The numbers of AIC and BIC of the Probit Model are only slightly higher to the numbers of the  Logit Model tho, so it seems they are nearly similar good. 
+
+Looking at AIC, the Binary Probit Model performs best. This is supported by the BIC as in both cases the Binary Logit Model results in the lowest value. AIC and BIC of the Logit Model differ only slightly however, so it seems almost as good. We would nonetheless choose the Logit model.
 
 ### 1.2.3
 
@@ -403,10 +409,11 @@ explore_params <- function(mod, param, grouping_param, n = 100, silent = FALSE){
 
 ```
 
+The predictors `smoke`, `race2`, `race3`, `lwt` and `ht` are significant at the $\alpha=0.05$ level in all our three models.
 
-Linear Probability Model:
+### Linear Probability Model:
 
-The coefficient of $\beta_0$ shows us that the conditional probability the birth weight of a baby is under 2500g is approximately __51,03%__ holding all other variables constant. 
+The intercept $\beta_0$ shows us that the conditional probability that the birth weight of a baby is under 2500g is approximately __51,03%__ holding all other variables constant. 
 Holding all other variables constant, the other coefficients can be interpreted as followed (significance level = 5%):
 
 smoke: If someone smokes the probability that the birth weight is under 2500g is increasing by approximately __15,99%__ c.p.
@@ -425,59 +432,39 @@ plogis(0.477788 )
 
 
 ```
-Logit/ Probit model 
+
+### Logit/ Probit model 
 
 Conditional probability that the birth weight of a baby is under 2500g is approximately is for both models around 61%. 
 
-Only __age__ and __lwt__ have negative signs. That means if age increases by 1 year or weight (lbs) of mother at last menstrual period increases by __1 lbs__ the probability that the birth weight of a baby is under 2500g decreases c.p.. Age is not significant tho. For all other parameters the probability increases c.p. 
+Only __age__ and __lwt__ have negative signs. That means if age increases by 1 year or weight (lbs) of mother at last menstrual period increases by __1 lbs__ the probability that the birth weight of a baby is under 2500g decreases, c.p. Age is not significant however. For all other parameters the probability increases, c.p. 
 
-Probit/ Logit Model: 
+### Probit/ Logit Model: 
 
 Significant Parameters: 
+
+\newpage
 ```{r}
 
-# Like this!
-explore_params(probit_mod, "smoke")
-explore_params(logit_mod, "smoke")
-explore_params(logit_mod, "smoke")
-
-# Binary models can produce different effects for effects for different groups, even without interactions
-# This is a consequence of the non-linearity of the model
-explore_params(probit_mod, "smoke", "ui")
-
-# Compare the models
-prob_smoke <- explore_params(probit_mod, "smoke", silent = TRUE) + ggtitle("Probit model")
-logit_smoke <- explore_params(logit_mod, "smoke", silent = TRUE) + ggtitle("Logit model")
-gridExtra::grid.arrange(prob_smoke, logit_smoke, ncol = 2)
-
-
-prob_race <- explore_params(probit_mod, "race", silent = TRUE) + ggtitle("Probit model")
-logit_race <- explore_params(logit_mod, "race", silent = TRUE) + ggtitle("Logit model")
-gridExtra::grid.arrange(prob_race, logit_race, ncol = 2)
-
-
-prob_lwt <- explore_params(probit_mod, "lwt", silent = TRUE) + ggtitle("Probit model")
-logit_lwt <- explore_params(logit_mod, "lwt", silent = TRUE) + ggtitle("Logit model")
-gridExtra::grid.arrange(prob_lwt, logit_lwt, ncol = 2)
-
-
-prob_ht <- explore_params(probit_mod, "ht", silent = TRUE) + ggtitle("Probit model")
-logit_ht <- explore_params(logit_mod, "ht", silent = TRUE) + ggtitle("Logit model")
-gridExtra::grid.arrange(prob_ht, logit_ht, ncol = 2)
-
-
-
-
-
-
-
-
-
+explore_params(probit_mod, "smoke", silent = TRUE) + ggtitle("Probit model")
+explore_params(logit_mod, "smoke", silent = TRUE) + ggtitle("Logit model")
+```
+\newpage
+```{r}
+explore_params(probit_mod, "lwt", silent = TRUE) + ggtitle("Probit model")
+explore_params(logit_mod, "lwt", silent = TRUE) + ggtitle("Logit model")
+```
+\newpage
+```{r}
+explore_params(probit_mod, "ht", silent = TRUE) + ggtitle("Probit model")
+explore_params(logit_mod, "ht", silent = TRUE) + ggtitle("Logit model")
 
 ```
-We observe a non linear effect that in both models the probability that the birth weight of a baby is under 2500g is decreasing with increasing weight (lbs) of mother at last menstrual period averaging over all of the other parameters. The difference between the person with the lowest and the highest person was in average around __37%__. 
+\newpage
 
-We calculated the average probability for different type of women and can observe that the average difference in probability between a woman who is smoking and a woman who does not smoke is about __17%__. The probability that the birth weight of a baby is under 2500g is higher for a woman who is smoking.
+We observe a non linear effect that in both models the probability that the birth weight of a baby is under 2500g is decreasing with increasing weight (lbs) of mother at last menstrual period averaging over all of the other parameters. The difference between the person with the lowest and the highest person was on average around __37%__. 
+
+We calculated the average probability for different types of women and can observe that the average difference in probability between a woman who is smoking and a woman who does not smoke is about __17%__. The probability that the birth weight of a baby is under 2500g is higher for a woman who is smoking.
 
 We again calculated the average probability for different type of women and can observe that the average difference in probability between a woman with a history of hypertension and a woman without is around __37%__ for both models. While it is higher for woman with a history of hypertension that the birth weight of a baby is under 2500g.
 
@@ -488,18 +475,16 @@ We again calculated the average probability for different type of women and can 
 Predictions: 
 ```{r}
 
-babies1 <- data.frame(low= 1, smoke = 0, race = as.factor(1), age = 30, lwt= 140, ptl= 0, ht= 0, ht = 1, ui = 0, ftv= 2)
+babies_pred <- data.frame(low= 1, smoke = 0, race = as.factor(1), age = 30, lwt= 140, ptl= 0, ht= 0, ht = 1, ui = 0, ftv= 2)
 
-pred1 <- predict(LinearProbability, babies1)
-pred1
+babies_pred_lp <- predict(LinearProbability, babies_pred)
+#babies_pred_lp
 
+babies_pred_probit <- predict(probit_mod, babies_pred, type = "response")
+#babies_pred_probit
 
-pred2 <- predict(probit_mod, babies1, type = "response")
-pred2
-
-pred3 <- predict(logit_mod, babies1, type = "response")
-pred3
-
+babies_pred_logit <- predict(logit_mod, babies_pred, type = "response")
+#babies_pred_logit
 
 
 ```
@@ -509,4 +494,38 @@ variables is predicted by the Binary Logit Model. With a probability of __0.0806
 
 
 
-#2 Theory
+# 2 Theory
+
+We would like to model the expected final mark which can take on values in the set {1,2,3,4,5}. This is a case of an ordered categorical variable, since we argue that the grades are not evenly-spaced and thus non-linear. The predictors $X_1$, $X_2$ and $X_3$ are interval variables while $X_4$ is, like Y, an ordered categorical variable.
+
+If we used a "standard" linear regression model for this task where
+
+$Y=\beta_{0}+\beta_{1} X_{1}+\ldots+\beta_{K} X_{K}+u, \quad \mathbb{E}\left(u \mid X_{1}, \ldots, X_{K}\right)=0$
+
+we would run into multiple problems. First, the final mark can only take on integer values, but we would be predicting interval numbers. Second, we could have heterskedastic residuals. Third, when predicting the final grade, we could end up with negative numbers (for example, if we assumed a student who studied especially hard) or numbers larger than 5. Alternatively we could model the log of the expected grade Y, but that would still leave problem 1 and 2. We could also consider a Poisson distribution, but this would again cause us to predict values outside of the set.
+
+This problem seems to be similar to a logistic regression, with the
+difference that we have 5 different possible outcomes. Therefore we
+suggest to use the **soft max function**. The softmax function is
+sometimes called the multi-class logistic regression. This is because
+the softmax is a generalization of logistic regression that can be used
+for multi-class classification, and its formula is very similar to the
+sigmoid function which is used for logistic regression. We want any
+output Y as probability that a given item belongs to one of our 5
+classes.
+
+$\hat{y} = softmax(o)$ where $\hat{y_j} = exp(o_j))/(\sum_k exp(o_k))$
+
+The softmax function gives us any vector $\hat{y}$ which can be
+interpreted as the estimated conditional probability of each class k
+{1,2,3,4,5} given any input (X1,X2,X3,X4,X5). So for each parameter X we
+get 5 probabilities.
+
+Bonus Question:
+
+To model the most likely final mark we need the maximum likelihood
+estimator of our soft max function. For that we calculate the set of
+parameters that maximize the soft max function and gives us the highest
+probability.
+
+

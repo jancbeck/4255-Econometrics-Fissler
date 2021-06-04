@@ -77,8 +77,8 @@ abline(0,0, col="blue")
 
 ```
 
-Assumption A1, $\mathbb{E}\left(u_{t}\right)=0$, seems violated, since the residuals lie mostly above 0 for values before 2012 and after 2018 and below 0 for the values in between. This suggests there is a systematic error in our model.  
-Assumption A2, $\mathbb{V}\left(u_{t}\right)=\sigma_{u}^{2}$, seems violated because the residual values tend to fluctuate stronger in the time frame of 2012 to 2014 than they to from 2014 till 2017. They therefore seem not independent.  
+Assumption A1, $\mathbb{E}\left(u_{t}\right)=0$, seems violated, since the residuals lie mostly above 0 for values before 2012 and after 2018 and below 0 for the values in between. This suggests there is a systematic error in our model.\
+Assumption A2, $\mathbb{V}\left(u_{t}\right)=\sigma_{u}^{2}$, seems violated because the residual values tend to fluctuate stronger in the time frame of 2012 to 2014 than they to from 2014 till 2017. They therefore seem not independent.
 
 ### 1.2.5
 
@@ -223,8 +223,7 @@ abline(0,0, col="blue")
 
 ```
 
-By glancing at the plots above, we can see that the residuals now look a lot less correlated and fluctuate regularly above and below 0 for all values of X. Assumption A1 is therefore given.
-Arguably, A2 is still somewhat violated by the strong outlier in 2012, but nonetheless, the model is an clear improvement over Model 1 overall.
+By glancing at the plots above, we can see that the residuals now look a lot less correlated and fluctuate regularly above and below 0 for all values of X. Assumption A1 is therefore given. Arguably, A2 is still somewhat violated by the strong outlier in 2012, but nonetheless, the model is an clear improvement over Model 1 overall.
 
 The ACF and PACF show not hint of autocorrelated residuals.
 
@@ -232,7 +231,9 @@ The ACF and PACF show not hint of autocorrelated residuals.
 Acf(md2$residuals, main = "Fig. 8: Model 2 ACF")
 Pacf(md2$residuals, main = "Fig. 9: Model 2 PACF")
 ```
+
 \newpage
+
 ```{r}
 Box.test(resid(md2), type = "Ljung-Box", lag=1)
 Box.test(resid(md2), type = "Ljung-Box", lag=2)
@@ -241,7 +242,7 @@ Box.test(resid(md2), type = "Ljung-Box", lag=4)
 Box.test(resid(md2), type = "Ljung-Box", lag=5)
 ```
 
-The Box-Ljung test shows no evidence to reject the null hypothesis that there is no  autocorrelation up to lag 5.
+The Box-Ljung test shows no evidence to reject the null hypothesis that there is no autocorrelation up to lag 5.
 
 \newpage
 
@@ -254,8 +255,7 @@ Finally, although the histogram looks slightly asymmetrically, the Jarque-Bera-T
 
 ### 1.2.12
 
-a)  
-For the first quarter of 2020, we use the estimates of our Model 1 as follows:
+a)  For the first quarter of 2020, we use the estimates of our Model 1 as follows:
 
 ```{r, echo=TRUE}
 t = nrow(gdp)-4 # the number of quarters in the dataset minus the 4 quarters of 2020
@@ -267,13 +267,16 @@ The output of the `forecast()` function confirms our calculation:
 ```{r, echo=TRUE}
 forecast(md1, h=1)
 ```
+
 \newpage
+
 b)  Bonus: For the first quarter of 2020, we use the estimates of our Model 2 as follows:
 
 ```{r, echo=TRUE}
 ut1 <- md2$residuals[length(md2$residuals)]
 3500269.84 + 44117.005*(t+1) + 0.7970 * ut1
 ```
+
 We used the residual of Q4 2019 for our error term $u_{t-1}$ and omitted the MA part.
 
 ### 1.2.13
@@ -291,25 +294,18 @@ lines(actual, col="red")
 
 ```
 
-
-
 ## 2.1
 
-a) Answer: FALSE  
+a)  Answer: FALSE
 
-First we can see following: In this process the phi is smaller than 1 which is a first sign that the process might be stationary. A phi of 0.9 is quite close to one and we expect correlation between neighboring values and that values need more time to revert back to the mean. 
-We assume that due to stationarity the mean is constant over time. So $E(Y_{t})= E(Y_{t-1})$ should hold. 
-The given formula is: $Y_{t}=1+\sqrt(t)+0.9Y_{t-1}+u_t$ with $u_t$ ~ $N(0, \sigma^2_u)$
-"Proof" of expectation:
-$$
+First we can see following: In this process the phi is smaller than 1 which is a first sign that the process might be stationary. A phi of 0.9 is quite close to one and we expect correlation between neighboring values and that values need more time to revert back to the mean. We assume that due to stationarity the mean is constant over time. So $E(Y_{t})= E(Y_{t-1})$ should hold. The given formula is: $Y_{t}=1+\sqrt(t)+0.9Y_{t-1}+u_t$ with $u_t$ \~ $N(0, \sigma^2_u)$ "Proof" of expectation: $$
 \begin{aligned}
 E(Y_{t})&=E(1+\sqrt{t}+\phi Y_{t-1 }+u_t)\\
 &=E(1)+E(\sqrt{t})+E(\phi Y_{t-1})+E(u_t)\\
 \end{aligned}
 $$
 
-$u_t$ is a random noise process and we know that the expectation of a random noise process is 0, so $E(u_t)= 0$. 
-For the assumption of same expected values for $Y_t$ and  $Y_{t-1}$ to hold, $E(\sqrt(t))+1$ need to be zero, which cannot be the case as $\sqrt(t)$ can not be a negative number. In this case, the mean is constantly rising due to $E(\sqrt(t))$. The assumption of a consistent mean is violated and it is not a stationary process. 
+$u_t$ is a random noise process and we know that the expectation of a random noise process is 0, so $E(u_t)= 0$. For the assumption of same expected values for $Y_t$ and $Y_{t-1}$ to hold, $E(\sqrt(t))+1$ need to be zero, which cannot be the case as $\sqrt(t)$ can not be a negative number. In this case, the mean is constantly rising due to $E(\sqrt(t))$. The assumption of a consistent mean is violated and it is not a stationary process.
 
 ```{r, echo=TRUE}
 n <- 600
@@ -329,9 +325,9 @@ abline(0,0, col="blue")
 
 ```
 
-b) Answer: FALSE
+b)  Answer: FALSE
 
-The given process has the formula: $Y_{t}=\sqrt{t}u_t$ with $u_t$ ~ $N(0,\sigma^2_u)$. Here $\phi= 0$, if we assume that $u_t$ is a white noise process with expected value of 0 independently of $\sqrt{t}$. The expected value of $u_t\sqrt{t}$ is zero too. Therefore the expectation would always be zero and the mean constant over time. $\phi=0$ implies that there is no dependence on neighboring values. However, the variance is not constant because it is changing over time with $\sqrt{t}$. Therefore, the process is not stationary. 
+The given process has the formula: $Y_{t}=\sqrt{t}u_t$ with $u_t$ \~ $N(0,\sigma^2_u)$. Here $\phi= 0$, if we assume that $u_t$ is a white noise process with expected value of 0 independently of $\sqrt{t}$. The expected value of $u_t\sqrt{t}$ is zero too. Therefore the expectation would always be zero and the mean constant over time. $\phi=0$ implies that there is no dependence on neighboring values. However, the variance is not constant because it is changing over time with $\sqrt{t}$. Therefore, the process is not stationary.
 
 ```{r, echo=TRUE}
 n <- 60000
@@ -344,12 +340,13 @@ for (t in 2:n) {
 plot(Y, type="l", xlim=c(50, n))
 abline(0,0, col="blue")
 
-``` 
+```
+
 \newpage
 
-c) Answer: FALSE
+c)  Answer: FALSE
 
-The given process $Z_t=\frac{Y_t}{\sqrt(t)}$ where $Y_t=Y_{t-1}+u_t$ with $u_t$ ~ $N(0, \sigma^2_u)$ is not weakly stationary. Something can be called weakly stationary if the distribution is the same over time. 
+The given process $Z_t=\frac{Y_t}{\sqrt(t)}$ where $Y_t=Y_{t-1}+u_t$ with $u_t$ \~ $N(0, \sigma^2_u)$ is not weakly stationary. Something can be called weakly stationary if the distribution is the same over time.
 
 $Y_t=Y_{t-1}+u_t$ is a random walk with $\phi=1$. If $\phi=1$ this implies a random walk and all random walk processes are non-stationary. Calculating the expected value it is shown that it is rising with time t and is not constant. As result one can say it is not weakly stationary.
 
@@ -366,12 +363,12 @@ for (t in 2:n) {
 plot(Z, type="l")
 abline(0,0, col="blue")
 
-``` 
+```
 
 ## 2.2
 
-Real world example: 
+Real world example:
 
-AR-Process: Assuming that some new buyers or sellers of stocks are influenced by recent (past) market transactions when deciding how much to offer or accept for the security, the stock market could be modeled as an AR-process.  
+AR-Process: Assuming that some new buyers or sellers of stocks are influenced by recent (past) market transactions when deciding how much to offer or accept for the security, the stock market could be modeled as an AR-process.
 
 MA-Process: A lake's temperature. Shocks are daily variations in temperatures.
