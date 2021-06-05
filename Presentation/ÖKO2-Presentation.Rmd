@@ -1,0 +1,84 @@
+---
+title: "Group 1 Presentation"
+subtitle: "Factors that impact [Jan's] study performance"
+author: 
+- Annika Janson 
+- Jan Beck 
+date:  "9.6.2021"
+output: 
+  beamer_presentation:
+    theme: "Boadilla"
+    colortheme: "dolphin"
+---
+
+```{r setup, include=FALSE}
+library(car)
+library(forecast)
+library(apsrtable)
+library(lmtest)
+library(lubridate)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+weeks <- read.csv("weeks.csv", sep=";", dec=",")
+weeks$Week <- dmy(weeks$Week)
+weeks$Duration <- as.numeric(hms(weeks$Duration))/3600 # duration in hours
+ts_weeks <- ts(weeks, frequency = 26, start = c(2018.5, 26)) # Semesters??
+
+```
+
+# Introduction
+
+## Data
+
+-   Origin of data
+-   Screenshot of time sheet
+-   Explain main variables
+-   Research question
+
+
+
+------------------------------------------------------------------------
+
+
+## Summary statistics
+
+-   Averages, median etc. of total, by classes, by tags, by semester
+-   Duration line plot
+-   bar plots
+
+------------------------------------------------------------------------
+
+```{r, cars, fig.cap="A scatterplot.", echo=FALSE}
+trend_model <- tslm(Duration ~ trend + season, data=ts_weeks)
+#summary(trend_model)
+plot(ts_weeks)
+#plot(trend_model$fitted.values, col="red", type='l')
+#plot(trend_model$residuals)
+
+#data2 <-  na.omit(weeks, type='l') 
+#plot(data2$Duration, type='l')
+```
+
+------------------------------------------------------------------------
+
+# Time-series analysis (Jan)
+-   explain weekly summary
+-   Describe variables (also weather, youtube, health)
+-   Run regression
+-   findings
+-   predict future
+
+
+
+------------------------------------------------------------------------
+
+# Probit/Logit model (Annika)
+-   explain by-class summary 
+-   Describe variables (also weather, youtube, health)
+
+------------------------------------------------------------------------
+
+
+
+## Findings
+
