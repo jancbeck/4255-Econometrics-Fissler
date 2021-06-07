@@ -17,6 +17,12 @@ library(forecast)
 library(apsrtable)
 library(lmtest)
 library(lubridate)
+library(dplyr)
+library(aod)
+library(MASS)
+library(corrplot)
+
+
 
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 weeks <- read.csv("weeks.csv", sep=";", dec=",")
@@ -24,9 +30,26 @@ weeks$Week <- dmy(weeks$Week)
 weeks$Duration <- as.numeric(hms(weeks$Duration))/3600 # duration in hours
 ts_weeks <- ts(weeks, frequency = 26, start = c(2018.5, 26)) # Semesters??
 
+classes <- read.csv("classes.csv", sep=";", dec=",")
+head(classes)
+
+entries <- read.csv("entries.csv", sep=";", dec=",")
+head(entries)
+
+tags <- read.csv("tags.csv", sep=";", dec=",")
+head(tags)
+
+
+
+
+
+
+
+
 ```
 
 # Introduction
+
 
 ## Data
 
@@ -73,6 +96,137 @@ plot(ts_weeks)
 ------------------------------------------------------------------------
 
 # Probit/Logit model (Annika)
+
+```{r, cars, fig.cap="A scatterplot.", echo=FALSE}
+classes = read.csv("classes.csv", sep=";", dec=",")
+weeks = read.csv("weeks.csv", sep=";", dec=",")
+
+
+
+
+###Zusammenhang zwischen Lerndauer/ECTS und Note
+duration = classes$Sum.of.Duration
+marks = as.factor(classes$Note)
+marks = as.ordered(marks)
+ECTS = classes$ECTS
+#duration = duration / ECTS ## skalierung für lernaufwand pro ects
+
+ind_h = regexpr(pattern=":", duration) - 1
+stunden = as.numeric(substring(duration, first=1, last=ind_h ))
+minuten = as.numeric(substring(duration, first=ind_h+2, last=ind_h+3))
+duration_m = minuten + stunden * 60
+
+df_1 = data.frame(dauer = duration_m, note=marks, ects = ECTS)
+del_ind = unique(which(is.na(df_1), arr.ind=TRUE)[, 1])
+df_1 = df_1[-del_ind, ]
+df_1$dauer = df_1$dauer / df_1$ects
+
+#logit = glm(note ~ dauer + ects, data=df_1, family="binomial")
+#probit = glm(note ~ dauer + ects, data=df_1, family=binomial(link="probit"))
+
+#summary(logit)
+#weights = coef(logit)
+#weights = exp(weights)
+
+
+###ordinal logistic regression with multpile categories
+
+model_1 = polr(note ~ ects , data=df_1, Hess=TRUE)
+#summary(model_1)
+ctable_1 = coef(summary(model_1))
+p_1 = pnorm(abs(ctable_1[, "t value"]), lower.tail=FALSE) * 2
+ctable_1 = cbind(ctable_1, "pvalue" = p_1)
+prediction_1 = predict(model_1, data.frame(ects = 4), type='prob')
+prediction_1
+
+
+model_2 = polr(note ~ dauer + ects, data=df_1, Hess=TRUE)
+#summary(model_2)
+ctable_2 = coef(summary(model_2))
+p_2 = pnorm(abs(ctable_2[, "t value"]), lower.tail=FALSE) * 2
+ctable_2 = cbind(ctable_2, "pvalue" = p_2) ## idk why we get nan's -> no information about p value
+prediction_2 = predict(model_2, data.frame(dauer = 120, ects = 4), type='prob')
+prediction_2
+
+model_3 = polr(note ~ dauer, data=df_1, Hess=TRUE)
+#summary(model_3)
+ctable_3 = coef(summary(model_3))
+p_3 = pnorm(abs(ctable_3[, "t value"]), lower.tail=FALSE) * 2
+ctable_3 = cbind(ctable_3, "pvalue" = p_3) 
+prediction_3 = predict(model_3, data.frame(dauer = 120), type='prob')
+prediction_3
+
+
+
+###correlation zw ects/dauer/note
+c_dauer_note = cor(df_1$dauer, as.numeric(as.character(df_1$note)))
+c_dauer_note
+c_ects_note = cor(df_1$ects, as.numeric(as.character(df_1$note)))
+c_ects_note
+c_ects_dauer = cor(df_1$ects, df_1$dauer)
+c_ects_dauer
+
+
+###correlation zw youtube/dauer/temperatur/hp
+
+df_2 = data.frame(Youtube = weeks$Youtube, Lernaufwand = weeks$Duration, Temp = weeks$Temp, Puls = weeks$HP)
+ind_rm = which(df_2$Lernaufwand =="")
+df_2 = df_2[-ind_rm, ]
+ind_na = which(is.na(df_2$Puls), arr.ind=TRUE)
+df_2 = df_2[-ind_na, ]
+
+ind_h = regexpr(pattern=":", df_2$Lernaufwand) - 1
+stunden = as.numeric(substring(df_2$Lernaufwand, first=1, last=ind_h ))
+minuten = as.numeric(substring(df_2$Lernaufwand, first=ind_h+2, last=ind_h+3))
+duration_m = minuten + stunden * 60
+
+df_2$Lernaufwand = duration_m
+
+corrs = cor(df_2)
+corrplot(corrs, method="circle")
+
+
+###
+
+df_3 = data.frame(dauer = weeks$Duration, monat = weeks$Month, yt = weeks$Youtube)
+
+ind_rm  = which(df_3$dauer == "")
+
+df_3 = df_3[-ind_rm, ]
+
+ind_h = regexpr(pattern=":", df_3$dauer) - 1
+stunden = as.numeric(substring(df_3$dauer, first=1, last=ind_h ))
+minuten = as.numeric(substring(df_3$dauer, first=ind_h+2, last=ind_h+3))
+duration_m = minuten + stunden * 60
+
+df_3$dauer = duration_m
+df_3$monat = as.factor(df_3$monat)
+
+dauer_sum = tapply(df_3$dauer, df_3$monat, sum)
+yt_sum = tapply(df_3$yt, df_3$monat, sum)
+
+
+dauer_sum = (dauer_sum - mean(dauer_sum)) / sd(dauer_sum)**2
+yt_sum = (yt_sum - mean(yt_sum)) / sd(yt_sum)**2
+cor(dauer_sum, yt_sum)
+lin = lm(yt_sum~dauer_sum, df_3)
+lin_coef = coef(summary(lin))
+options(scipen=999)
+plot(dauer_sum, yt_sum, type="p", col="blue", pch=4, lwd=2, main="Korrelation zwischen Youtube und Lernzeit pro Monat", xlab="Lernaufwand", ylab="Youtube")
+abline(coef(lin)[1:2], lwd=2)
+grid()
+text(labels=paste("correlation coefficient:", round(cor(dauer_sum, yt_sum), 4)), x=-0.0007, y=0.015)
+
+
+
+
+
+
+
+```
+
+
+
 -   explain by-class summary 
 -   Describe variables (also weather, youtube, health)
 
@@ -81,4 +235,19 @@ plot(ts_weeks)
 
 
 ## Findings
+
+
+- Sagt fast immer das Selbe aus, da es fast nur 1er und 2er gibt.Es können keine wirklichen Aussagen für sehr hohe oder sehr niedrige Stundenzahl an Lernaufwand oder ähnliches vorrausgesagt werden. 
+- Mit 120 Lernaufwand, schreibt Jan mit ca. 64% eine Eins. Aber eine gewisse Voreingenommenheit, da die Noten prinzipiell immer eher besser ausfallen und nicht ausreichen ist um genaue Vorhersagen zu treffen. 
+
+
+
+
+
+
+
+
+
+
+
 
