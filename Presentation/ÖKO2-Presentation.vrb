@@ -1,0 +1,35 @@
+\begin{verbatim}
+## [1] 0.2097182
+\end{verbatim}
+
+\begin{verbatim}
+## [1] 0.1531148
+\end{verbatim}
+
+\begin{verbatim}
+## [1] 0.2146247
+\end{verbatim}
+
+\begin{figure}
+\centering
+\includegraphics{ÖKO2-Presentation_files/figure-beamer/unnamed-chunk-10-1.pdf}
+\caption{A scatterplot.}
+\end{figure}
+
+\begin{verbatim}
+## [1] 0.711137
+\end{verbatim}
+
+\begin{figure}
+\centering
+\includegraphics{ÖKO2-Presentation_files/figure-beamer/unnamed-chunk-10-2.pdf}
+\caption{A scatterplot.}
+\end{figure}
+
+\begin{itemize}
+\tightlist
+\item
+  explain by-class summary
+\item
+  Describe variables (also weather, youtube, health)
+\end{itemize}

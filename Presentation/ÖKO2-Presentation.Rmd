@@ -1,5 +1,5 @@
 ---
-title: "Group 1 Presentation"
+title: "Präsentation - Gruppe 1 "
 subtitle: "Factors that impact [Jan's] study performance"
 author: 
 - Annika Janson 
@@ -7,8 +7,13 @@ author:
 date:  "9.6.2021"
 output: 
   beamer_presentation:
-    theme: "Boadilla"
+    latex_engine: xelatex
     colortheme: "dolphin"
+header-includes: 
+- \usepackage{dcolumn}
+- \renewcommand{\and}{\\}
+- \setmonofont[Scale=MatchLowercase]{Courier}
+- \setmonofont[Scale=0.6]{Courier}
 ---
 
 ```{r setup, include=FALSE}
@@ -22,82 +27,149 @@ library(aod)
 library(MASS)
 library(corrplot)
 
-
-
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
 weeks <- read.csv("weeks.csv", sep=";", dec=",")
 weeks$Week <- dmy(weeks$Week)
 weeks$Duration <- as.numeric(hms(weeks$Duration))/3600 # duration in hours
-ts_weeks <- ts(weeks, frequency = 26, start = c(2018.5, 26)) # Semesters??
 
 classes <- read.csv("classes.csv", sep=";", dec=",")
-head(classes)
+classes$Duration <- as.numeric(hms(classes$Sum.of.Duration))/3600 # duration in hours
 
 entries <- read.csv("entries.csv", sep=";", dec=",")
-head(entries)
+entries$Duration <- as.numeric(hms(entries$Duration))/3600 # duration in hours
 
 tags <- read.csv("tags.csv", sep=";", dec=",")
-head(tags)
-
-
-
-
-
-
+tags$Duration <- as.numeric(hms(tags$SumDuration))/3600 # duration in hours
 
 
 ```
 
-# Introduction
+# Einführung
 
+## Ausgangsdaten
 
-## Data
+-   Jan studiert seit WS 2018 BaWiso an der WU
+-   Sekundengenaue Zeiterfassungsdaten von 27.8.2018-28.5.2021
+-   Kategorisiert nach LV und Art der Lernaktivität (z.B. "Gruppenarbeit", "Prüfungsvorbereitung")
+-   1153 Observationen
 
--   Origin of data
--   Screenshot of time sheet
--   Explain main variables
--   Research question
-
-
+![Zeiterfassung](images/toggl.png)
 
 ------------------------------------------------------------------------
 
+## Forschungsfrage
+
+-   Lässt sich die Lernleistung erklären/vorhersagen?
+
+    ![](images/heatmap-02.png)
+
+------------------------------------------------------------------------
 
 ## Summary statistics
 
--   Averages, median etc. of total, by classes, by tags, by semester
--   Duration line plot
--   bar plots
+-   Dauer aller Studienaktivitäten: `r round(sum(entries$Duration), digits=2)` Stunden
+
+-   Mean (pro Woche): `r format(mean(na.omit(weeks$Duration)), digits=2)` Stunden. SD: `r format(sd(na.omit(weeks$Duration)), digits=2)`
+
+-   Extremwerte: 12h 40m 39s (14.11.2018)
+
+-   Gruppiert nach Art der Aktivität:\
+    \
+
+    ![](images/tags.png)
 
 ------------------------------------------------------------------------
 
-```{r, cars, fig.cap="A scatterplot.", echo=FALSE}
-trend_model <- tslm(Duration ~ trend + season, data=ts_weeks)
+# Zeitreihenanalyse
+
+-   Abhängige Variable: Wöchentliche Studienaktivität (h)
+-   Klassisches Regressionsmodel mit Trend $y_{t}=\mu_{t}+u_{t}$
+
+```{r, echo=FALSE}
+ts_weeks <- ts(weeks, frequency = 52, start = c(2018, 35)) # wöchentliche Daten
+trend_model <- tslm(Duration ~ trend, data=ts_weeks)
+
 #summary(trend_model)
-plot(ts_weeks)
+
+
+```
+
+```{r, results='asis', echo=FALSE}
+apsrtable::apsrtable(trend_model, model.names	= c("Trend"))
+```
+
+------------------------------------------------------------------------
+
+## Trendmodel \
+
+```{r, echo=FALSE}
+plot(ts_weeks[,2], xlab="Wochen", ylab="Studienaktivität (h)")
+lines(trend_model$fitted.values, col="red", las=2)
+
+```
+
+------------------------------------------------------------------------
+
+## Klassisches Regressionsmodel mit Trend und Season
+
+$$y_{t}=\mu_{t}+\tilde{s}_{t}+\mu_{t}\tilde{s}_{t}+u_{t}$$
+
+```{r, echo=FALSE}
+
+seasonal_trend_model <- tslm(Duration ~ trend + factor(Semester) + trend * factor(Semester), data=ts_weeks)
+#summary(seasonal_trend_model)
+plot(ts_weeks[,2], xlab="Wochen", ylab="Studienaktivität (h)")
+lines(seasonal_trend_model$fitted.values, col="red", las=2)
+
+#plot(ts_weeks[,3])
 #plot(trend_model$fitted.values, col="red", type='l')
 #plot(trend_model$residuals)
 
 #data2 <-  na.omit(weeks, type='l') 
 #plot(data2$Duration, type='l')
+
+
 ```
 
 ------------------------------------------------------------------------
 
-# Time-series analysis (Jan)
--   explain weekly summary
--   Describe variables (also weather, youtube, health)
--   Run regression
--   findings
--   predict future
+## Klassisches Regressionsmodel mit Trend und Season(=Semester)
 
+```{r, echo=FALSE}
+c1 <- coefficients(trend_model)
+c2 <- coefficients(seasonal_trend_model)
+length(c1) <- 12
+c <- data.frame(c1, c2)
+row.names(c) <- c("Intercept", "Trend","SS2019","WS2019","SS2020", "WS2020", "SS2021","Trend:SS2019","Trend:WS2019","Trend:SS2020", "Trend:WS2020", "Trend:SS2021")
+knitr::kable(c, col.names=c("Model1", "Model2"))
+```
 
+------------------------------------------------------------------------
+
+# Zeitreihenanalyse
+
+-   Abhängige Variable: Wöchentliche Studienaktivität (h)
+
+-   Erklärende Variablen:
+
+    -   Wetter: Sonnenstunden, Temperatur (monatlich, Hohe Warte ZAMG)
+
+    -   Anzahl Videos auf Youtube geschaut (Google Takeout)
+
+    -   Gewicht und Herzschlag, gemessen morgens (bis Anfang 2020)
+
+![](images/x.png)
 
 ------------------------------------------------------------------------
 
 # Probit/Logit model (Annika)
 
-```{r, cars, fig.cap="A scatterplot.", echo=FALSE}
+## Zusammenhang zwischen Lerndauer/ECTS und Note
+
+ordinal logistic regression with multiple categories
+
+```{r, fig.cap="A scatterplot.", echo=FALSE}
 classes = read.csv("classes.csv", sep=";", dec=",")
 weeks = read.csv("weeks.csv", sep=";", dec=",")
 
@@ -121,32 +193,48 @@ del_ind = unique(which(is.na(df_1), arr.ind=TRUE)[, 1])
 df_1 = df_1[-del_ind, ]
 df_1$dauer = df_1$dauer / df_1$ects
 
-#logit = glm(note ~ dauer + ects, data=df_1, family="binomial")
-#probit = glm(note ~ dauer + ects, data=df_1, family=binomial(link="probit"))
+logit = glm(note ~ dauer + ects, data=df_1, family="binomial")
+probit = glm(note ~ dauer + ects, data=df_1, family=binomial(link="probit"))
 
-#summary(logit)
+summary(logit)
 #weights = coef(logit)
 #weights = exp(weights)
 
+```
 
-###ordinal logistic regression with multpile categories
+## ordinal logistic regression with multiple categories
 
+```{r, fig.cap="A scatterplot.", echo=FALSE}
 model_1 = polr(note ~ ects , data=df_1, Hess=TRUE)
-#summary(model_1)
+summary(model_1)
 ctable_1 = coef(summary(model_1))
 p_1 = pnorm(abs(ctable_1[, "t value"]), lower.tail=FALSE) * 2
 ctable_1 = cbind(ctable_1, "pvalue" = p_1)
 prediction_1 = predict(model_1, data.frame(ects = 4), type='prob')
 prediction_1
 
+```
 
+------------------------------------------------------------------------
+
+## Model 2
+
+```{r, fig.cap="A scatterplot.", echo=FALSE}
 model_2 = polr(note ~ dauer + ects, data=df_1, Hess=TRUE)
-#summary(model_2)
+summary(model_2)
 ctable_2 = coef(summary(model_2))
 p_2 = pnorm(abs(ctable_2[, "t value"]), lower.tail=FALSE) * 2
 ctable_2 = cbind(ctable_2, "pvalue" = p_2) ## idk why we get nan's -> no information about p value
 prediction_2 = predict(model_2, data.frame(dauer = 120, ects = 4), type='prob')
 prediction_2
+
+```
+
+------------------------------------------------------------------------
+
+## Model 3
+
+```{r, fig.cap="A scatterplot.", echo=FALSE}
 
 model_3 = polr(note ~ dauer, data=df_1, Hess=TRUE)
 #summary(model_3)
@@ -156,7 +244,11 @@ ctable_3 = cbind(ctable_3, "pvalue" = p_3)
 prediction_3 = predict(model_3, data.frame(dauer = 120), type='prob')
 prediction_3
 
+```
 
+------------------------------------------------------------------------
+
+```{r, fig.cap="A scatterplot.", echo=FALSE}
 
 ###correlation zw ects/dauer/note
 c_dauer_note = cor(df_1$dauer, as.numeric(as.character(df_1$note)))
@@ -219,35 +311,14 @@ text(labels=paste("correlation coefficient:", round(cor(dauer_sum, yt_sum), 4)),
 
 
 
-
-
-
-
 ```
 
-
-
--   explain by-class summary 
+-   explain by-class summary
 -   Describe variables (also weather, youtube, health)
 
 ------------------------------------------------------------------------
 
-
-
 ## Findings
 
-
-- Sagt fast immer das Selbe aus, da es fast nur 1er und 2er gibt.Es können keine wirklichen Aussagen für sehr hohe oder sehr niedrige Stundenzahl an Lernaufwand oder ähnliches vorrausgesagt werden. 
-- Mit 120 Lernaufwand, schreibt Jan mit ca. 64% eine Eins. Aber eine gewisse Voreingenommenheit, da die Noten prinzipiell immer eher besser ausfallen und nicht ausreichen ist um genaue Vorhersagen zu treffen. 
-
-
-
-
-
-
-
-
-
-
-
-
+-   Sagt fast immer das Selbe aus, da es fast nur 1er und 2er gibt.Es können keine wirklichen Aussagen für sehr hohe oder sehr niedrige Stundenzahl an Lernaufwand oder ähnliches vorrausgesagt werden.
+-   Mit 120 Lernaufwand, schreibt Jan mit ca. 64% eine Eins. Aber eine gewisse Voreingenommenheit, da die Noten prinzipiell immer eher besser ausfallen und nicht ausreichen ist um genaue Vorhersagen zu treffen.
