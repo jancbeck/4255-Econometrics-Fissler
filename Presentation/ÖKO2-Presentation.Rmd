@@ -167,13 +167,11 @@ knitr::kable(c, col.names=c("Model1", "Model2"))
 
 ## Zusammenhang zwischen Lerndauer/ECTS und Note
 
-ordinal logistic regression with multiple categories
+Ordinal logistic regression with multiple categories
 
 ```{r, fig.cap="A scatterplot.", echo=FALSE}
 classes = read.csv("classes.csv", sep=";", dec=",")
 weeks = read.csv("weeks.csv", sep=";", dec=",")
-
-
 
 
 ###Zusammenhang zwischen Lerndauer/ECTS und Note
@@ -193,25 +191,32 @@ del_ind = unique(which(is.na(df_1), arr.ind=TRUE)[, 1])
 df_1 = df_1[-del_ind, ]
 df_1$dauer = df_1$dauer / df_1$ects
 
-logit = glm(note ~ dauer + ects, data=df_1, family="binomial")
-probit = glm(note ~ dauer + ects, data=df_1, family=binomial(link="probit"))
+##logit = glm(note ~ dauer + ects, data=df_1, family="binomial")
 
-summary(logit)
+##probit = glm(note ~ dauer + ects, data=df_1, family=binomial(link="probit"))
+
+
+##summary(logit)
+##summary(probit)
 #weights = coef(logit)
 #weights = exp(weights)
 
 ```
+## Model 1
 
-## ordinal logistic regression with multiple categories
+Vorhersage der Note bei 4 ECTS:
 
 ```{r, fig.cap="A scatterplot.", echo=FALSE}
+
 model_1 = polr(note ~ ects , data=df_1, Hess=TRUE)
 summary(model_1)
 ctable_1 = coef(summary(model_1))
 p_1 = pnorm(abs(ctable_1[, "t value"]), lower.tail=FALSE) * 2
 ctable_1 = cbind(ctable_1, "pvalue" = p_1)
+ctable_1
 prediction_1 = predict(model_1, data.frame(ects = 4), type='prob')
-prediction_1
+(prediction_1)
+
 
 ```
 
@@ -219,13 +224,16 @@ prediction_1
 
 ## Model 2
 
+Vorhersage der Note bei 40h Lernaufwand pro ECTS (also insg. 120h) und 4 ECTS
+
 ```{r, fig.cap="A scatterplot.", echo=FALSE}
 model_2 = polr(note ~ dauer + ects, data=df_1, Hess=TRUE)
 summary(model_2)
 ctable_2 = coef(summary(model_2))
 p_2 = pnorm(abs(ctable_2[, "t value"]), lower.tail=FALSE) * 2
 ctable_2 = cbind(ctable_2, "pvalue" = p_2) ## idk why we get nan's -> no information about p value
-prediction_2 = predict(model_2, data.frame(dauer = 120, ects = 4), type='prob')
+ctable_2
+prediction_2 = predict(model_2, data.frame(dauer = 600, ects = 4), type='prob') ## Lernaufwand pro ECTS
 prediction_2
 
 ```
@@ -234,6 +242,8 @@ prediction_2
 
 ## Model 3
 
+Vorhersage der Note bei 120h Lernaufwand
+
 ```{r, fig.cap="A scatterplot.", echo=FALSE}
 
 model_3 = polr(note ~ dauer, data=df_1, Hess=TRUE)
@@ -241,25 +251,33 @@ model_3 = polr(note ~ dauer, data=df_1, Hess=TRUE)
 ctable_3 = coef(summary(model_3))
 p_3 = pnorm(abs(ctable_3[, "t value"]), lower.tail=FALSE) * 2
 ctable_3 = cbind(ctable_3, "pvalue" = p_3) 
-prediction_3 = predict(model_3, data.frame(dauer = 120), type='prob')
+ctable_3
+prediction_3 = predict(model_3, data.frame(dauer = 600), type='prob')
 prediction_3
 
 ```
 
 ------------------------------------------------------------------------
 
+## Korrelationen
+
 ```{r, fig.cap="A scatterplot.", echo=FALSE}
 
 ###correlation zw ects/dauer/note
 c_dauer_note = cor(df_1$dauer, as.numeric(as.character(df_1$note)))
-c_dauer_note
+paste("Korrelation zwischen Dauer und Note:", round(c_dauer_note, 4))
 c_ects_note = cor(df_1$ects, as.numeric(as.character(df_1$note)))
-c_ects_note
+paste("Korrelation zwichen ECTS und Note:", round(c_ects_note, 4))
 c_ects_dauer = cor(df_1$ects, df_1$dauer)
-c_ects_dauer
+paste("Korrelation zwischen ECTS und Dauer:", round(c_ects_dauer, 4))
 
+```
+------------------------------------------------------------------------
 
-###correlation zw youtube/dauer/temperatur/hp
+### Korrelation zwischen Youtube/Dauer/Temperatur/Puls
+
+```{r, fig.cap="A scatterplot.", echo=FALSE}
+### Lernaufwand pro ECTS
 
 df_2 = data.frame(Youtube = weeks$Youtube, Lernaufwand = weeks$Duration, Temp = weeks$Temp, Puls = weeks$HP)
 ind_rm = which(df_2$Lernaufwand =="")
@@ -277,8 +295,14 @@ df_2$Lernaufwand = duration_m
 corrs = cor(df_2)
 corrplot(corrs, method="circle")
 
+```
 
-###
+------------------------------------------------------------------------
+
+## Korrelation zwischen Youtube und Lernzeit pro Monat
+
+```{r, fig.cap="A scatterplot.", echo=FALSE}
+
 
 df_3 = data.frame(dauer = weeks$Duration, monat = weeks$Month, yt = weeks$Youtube)
 
@@ -313,12 +337,10 @@ text(labels=paste("correlation coefficient:", round(cor(dauer_sum, yt_sum), 4)),
 
 ```
 
--   explain by-class summary
--   Describe variables (also weather, youtube, health)
 
 ------------------------------------------------------------------------
 
 ## Findings
 
 -   Sagt fast immer das Selbe aus, da es fast nur 1er und 2er gibt.Es können keine wirklichen Aussagen für sehr hohe oder sehr niedrige Stundenzahl an Lernaufwand oder ähnliches vorrausgesagt werden.
--   Mit 120 Lernaufwand, schreibt Jan mit ca. 64% eine Eins. Aber eine gewisse Voreingenommenheit, da die Noten prinzipiell immer eher besser ausfallen und nicht ausreichen ist um genaue Vorhersagen zu treffen.
+-   Mit insgesamt 120h Lernaufwand in einem Kurs mit 4 ects schreibt Jan mit einer Wahrscheinlichkeit von 57,24% eine Eins. Aber eine gewisse Verzerrung besteht, da die Noten prinzipiell immer eher besser ausfallen und der Datensatz nicht ausreichend ist um genaue Vorhersagen zu treffen.
