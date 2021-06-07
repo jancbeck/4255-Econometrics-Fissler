@@ -9,6 +9,7 @@ output:
   beamer_presentation:
     latex_engine: xelatex
     colortheme: "dolphin"
+    #incremental: true
 header-includes: 
 - \usepackage{dcolumn}
 - \renewcommand{\and}{\\}
@@ -32,6 +33,9 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 weeks <- read.csv("weeks.csv", sep=";", dec=",")
 weeks$Week <- dmy(weeks$Week)
 weeks$Duration <- as.numeric(hms(weeks$Duration))/3600 # duration in hours
+weeks$Weight.c <- weeks$Weight - 78.73 # mean-centered
+weeks$HR.c <- weeks$HP - 74.32 # mean-centered
+weeks$Sunny <- ifelse(weeks$Sun>41.55, 1, 0)
 
 classes <- read.csv("classes.csv", sep=";", dec=",")
 classes$Duration <- as.numeric(hms(classes$Sum.of.Duration))/3600 # duration in hours
@@ -84,9 +88,10 @@ tags$Duration <- as.numeric(hms(tags$SumDuration))/3600 # duration in hours
 # Zeitreihenanalyse
 
 -   Abhängige Variable: Wöchentliche Studienaktivität (h)
--   Klassisches Regressionsmodel mit Trend $y_{t}=\mu_{t}+u_{t}$
+-   Klassisches Regressionsmodel mit Trend
 
 ```{r, echo=FALSE}
+#weeks <- weeks[!(is.na(weeks$Duration) | weeks$Duration==""), ] # remove weeks with no Duration
 ts_weeks <- ts(weeks, frequency = 52, start = c(2018, 35)) # wöchentliche Daten
 trend_model <- tslm(Duration ~ trend, data=ts_weeks)
 
@@ -101,7 +106,9 @@ apsrtable::apsrtable(trend_model, model.names	= c("Trend"))
 
 ------------------------------------------------------------------------
 
-## Trendmodel \
+## Einfaches Trendmodel
+
+$$y_{t}=\mu_{t}+u_{t}$$
 
 ```{r, echo=FALSE}
 plot(ts_weeks[,2], xlab="Wochen", ylab="Studienaktivität (h)")
@@ -111,25 +118,10 @@ lines(trend_model$fitted.values, col="red", las=2)
 
 ------------------------------------------------------------------------
 
-## Klassisches Regressionsmodel mit Trend und Season
-
-$$y_{t}=\mu_{t}+\tilde{s}_{t}+\mu_{t}\tilde{s}_{t}+u_{t}$$
-
 ```{r, echo=FALSE}
-
-seasonal_trend_model <- tslm(Duration ~ trend + factor(Semester) + trend * factor(Semester), data=ts_weeks)
-#summary(seasonal_trend_model)
-plot(ts_weeks[,2], xlab="Wochen", ylab="Studienaktivität (h)")
-lines(seasonal_trend_model$fitted.values, col="red", las=2)
-
-#plot(ts_weeks[,3])
-#plot(trend_model$fitted.values, col="red", type='l')
-#plot(trend_model$residuals)
-
-#data2 <-  na.omit(weeks, type='l') 
-#plot(data2$Duration, type='l')
-
-
+fc_trend_model <- forecast(trend_model, h=26) # forecast for one semester
+plot(fc_trend_model, main= "Forecast Trend Model", ylab = "Studienleistung (h)", xlab = "Wochen", xaxt="n")
+lines(trend_model$fitted.values, col="red")
 ```
 
 ------------------------------------------------------------------------
@@ -137,15 +129,68 @@ lines(seasonal_trend_model$fitted.values, col="red", las=2)
 ## Klassisches Regressionsmodel mit Trend und Season(=Semester)
 
 ```{r, echo=FALSE}
+seasonal_trend_model <- tslm(Duration ~ trend + factor(Semester), data=ts_weeks)
+#summary(seasonal_trend_model)
+seasonal_trend_model2 <- tslm(Duration ~ trend + factor(Semester) + trend * factor(Semester), data=ts_weeks)
+#summary(seasonal_trend_model2)
 c1 <- coefficients(trend_model)
 c2 <- coefficients(seasonal_trend_model)
+c3 <- coefficients(seasonal_trend_model2)
 length(c1) <- 12
-c <- data.frame(c1, c2)
+length(c2) <- 12
+c <- data.frame(c1, c2, c3)
 row.names(c) <- c("Intercept", "Trend","SS2019","WS2019","SS2020", "WS2020", "SS2021","Trend:SS2019","Trend:WS2019","Trend:SS2020", "Trend:WS2020", "Trend:SS2021")
-knitr::kable(c, col.names=c("Model1", "Model2"))
+knitr::kable(c, col.names=c("Trend", "Trend+Season", "Trend*Season"))
 ```
 
 ------------------------------------------------------------------------
+
+## Model mit Trend, Season (=Semester)
+
+$$y_{t}=\mu_{t}+\tilde{s}_{t}+u_{t}$$
+
+```{r, echo=FALSE}
+
+plot(ts_weeks[,2], xlab="Wochen", ylab="Studienaktivität (h)")
+lines(seasonal_trend_model$fitted.values, col="red", las=3)
+
+```
+
+------------------------------------------------------------------------
+
+## Model mit Trend, Season (=Semester), Interaktionsterm
+
+$$y_{t}=\mu_{t}+\tilde{s}_{t}+\mu_{t}\tilde{s}_{t}+u_{t}$$
+
+```{r, echo=FALSE}
+
+plot(ts_weeks[,2], xlab="Wochen", ylab="Studienaktivität (h)")
+lines(seasonal_trend_model2$fitted.values, col="red", las=3)
+
+```
+
+------------------------------------------------------------------------
+
+## Residuenanalyse (Model 3)
+
+\
+
+```{r, echo=FALSE}
+par(mfrow=c(3,1))
+plot(seasonal_trend_model2$residuals^2, ylab="Squared Residuals")
+Acf(seasonal_trend_model2$residuals, main="ACF")
+Pacf(seasonal_trend_model2$residuals, main="PACF")
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+knitr::kable(
+  cbind(c("Trend", "Trend+Season", "Trend*Season"), c(summary(trend_model)$adj.r.squared, summary(seasonal_trend_model)$adj.r.squared, summary(seasonal_trend_model2)$adj.r.squared))
+, caption = 'Adj. R Squared of classical models.'
+)
+dwtest(seasonal_trend_model2) 
+```
 
 # Zeitreihenanalyse
 
@@ -153,7 +198,7 @@ knitr::kable(c, col.names=c("Model1", "Model2"))
 
 -   Erklärende Variablen:
 
-    -   Wetter: Sonnenstunden, Temperatur (monatlich, Hohe Warte ZAMG)
+    -   Wetter: Sonnenstunden (monatlich, Hohe Warte ZAMG)
 
     -   Anzahl Videos auf Youtube geschaut (Google Takeout)
 
@@ -163,7 +208,48 @@ knitr::kable(c, col.names=c("Model1", "Model2"))
 
 ------------------------------------------------------------------------
 
-# Probit/Logit model (Annika)
+## Externe Variablen
+
+```{r, echo=FALSE}
+summary(cbind(weeks[5], weeks[7:9]))
+
+```
+
+------------------------------------------------------------------------
+
+## Externe Variablen 
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(weeks$Sunny, xlab="Wochen", ylab="Sonnige Monate", type="l")
+plot(weeks$Youtube, xlab="Wochen", ylab="Youtube (Videos pro Woche)", type="l")
+plot(weeks$HR.c, xlab="Wochen", ylab="Herzschlag (pro Minute)", type="l")
+plot(weeks$Weight.c, xlab="Wochen", ylab="(Über-)Gewicht", type="l")
+
+```
+
+------------------------------------------------------------------------
+
+```{r, echo=FALSE}
+weeks <- weeks[!(is.na(weeks$Duration) | weeks$Duration==""), ] # remove weeks with no Duration
+ext_model <- lm(Duration ~ Sunny + Youtube + HR.c + Weight.c, data=weeks)
+
+```
+
+```{r, results='asis', echo=FALSE}
+apsrtable::apsrtable(ext_model, Sweave = TRUE, model.names=c("Externes Model"))
+```
+
+------------------------------------------------------------------------
+
+## Findings
+
+-   Grundsätzlich abnehmender Trend der Studienleistung
+-   Semester unterscheiden sich stark im Schnitt und Trend (stärker als globaler Trend)
+-   Wetter, Medienkonsum und Gesundheit erklären mehr Variation in Studienaktivität als Trend model
+-   Jan lernt in sonnigen Monaten im Schnitt c.p. 2.75h weniger (nicht signifkant) und sollte vielleicht ein paar Kilo zunehmen
+
+# Probit/Logit model
 
 ## Zusammenhang zwischen Lerndauer/ECTS und Note
 
@@ -202,6 +288,7 @@ df_1$dauer = df_1$dauer / df_1$ects
 #weights = exp(weights)
 
 ```
+
 ## Model 1
 
 Vorhersage der Note bei 4 ECTS:
@@ -272,6 +359,7 @@ c_ects_dauer = cor(df_1$ects, df_1$dauer)
 paste("Korrelation zwischen ECTS und Dauer:", round(c_ects_dauer, 4))
 
 ```
+
 ------------------------------------------------------------------------
 
 ### Korrelation zwischen Youtube/Dauer/Temperatur/Puls
@@ -336,7 +424,6 @@ text(labels=paste("correlation coefficient:", round(cor(dauer_sum, yt_sum), 4)),
 
 
 ```
-
 
 ------------------------------------------------------------------------
 
