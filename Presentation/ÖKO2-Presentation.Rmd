@@ -91,7 +91,6 @@ tags$Duration <- as.numeric(hms(tags$SumDuration))/3600 # duration in hours
 -   Klassisches Regressionsmodel mit Trend
 
 ```{r, echo=FALSE}
-#weeks <- weeks[!(is.na(weeks$Duration) | weeks$Duration==""), ] # remove weeks with no Duration
 ts_weeks <- ts(weeks, frequency = 52, start = c(2018, 35)) # wöchentliche Daten
 trend_model <- tslm(Duration ~ trend, data=ts_weeks)
 
@@ -110,7 +109,10 @@ apsrtable::apsrtable(trend_model, model.names	= c("Trend"))
 
 $$y_{t}=\mu_{t}+u_{t}$$
 
+
 ```{r, echo=FALSE}
+
+
 plot(ts_weeks[,2], xlab="Wochen", ylab="Studienaktivität (h)")
 lines(trend_model$fitted.values, col="red", las=2)
 
@@ -120,7 +122,7 @@ lines(trend_model$fitted.values, col="red", las=2)
 
 ```{r, echo=FALSE}
 fc_trend_model <- forecast(trend_model, h=26) # forecast for one semester
-plot(fc_trend_model, main= "Forecast Trend Model", ylab = "Studienleistung (h)", xlab = "Wochen", xaxt="n")
+plot(fc_trend_model, main= "Forecast Trend Model", ylab = "Studienleistung (h)", xlab = "Wochen")
 lines(trend_model$fitted.values, col="red")
 ```
 
@@ -129,18 +131,19 @@ lines(trend_model$fitted.values, col="red")
 ## Klassisches Regressionsmodel mit Trend und Season(=Semester)
 
 ```{r, echo=FALSE}
-seasonal_trend_model <- tslm(Duration ~ trend + factor(Semester), data=ts_weeks)
+seasonal_trend_model <- tslm(Duration ~ trend + factor(Semester) + Aktiv, data=ts_weeks)
 #summary(seasonal_trend_model)
-seasonal_trend_model2 <- tslm(Duration ~ trend + factor(Semester) + trend * factor(Semester), data=ts_weeks)
+seasonal_trend_model2 <- tslm(Duration ~ trend + factor(Semester) + trend * factor(Semester) + Aktiv, data=ts_weeks)
 #summary(seasonal_trend_model2)
 c1 <- coefficients(trend_model)
 c2 <- coefficients(seasonal_trend_model)
 c3 <- coefficients(seasonal_trend_model2)
-length(c1) <- 12
-length(c2) <- 12
+length(c1) <- 13
+length(c2) <- 13
 c <- data.frame(c1, c2, c3)
-row.names(c) <- c("Intercept", "Trend","SS2019","WS2019","SS2020", "WS2020", "SS2021","Trend:SS2019","Trend:WS2019","Trend:SS2020", "Trend:WS2020", "Trend:SS2021")
+row.names(c) <- c("Intercept", "Trend","SS2019","WS2019","SS2020", "WS2020", "SS2021","Trend:SS2019 %>% ","Trend:WS2019","Trend:SS2020", "Trend:WS2020", "Trend:SS2021", "Aktiv")
 knitr::kable(c, col.names=c("Trend", "Trend+Season", "Trend*Season"))
+
 ```
 
 ------------------------------------------------------------------------
@@ -161,6 +164,7 @@ lines(seasonal_trend_model$fitted.values, col="red", las=3)
 ## Model mit Trend, Season (=Semester), Interaktionsterm
 
 $$y_{t}=\mu_{t}+\tilde{s}_{t}+\mu_{t}\tilde{s}_{t}+u_{t}$$
+
 
 ```{r, echo=FALSE}
 
@@ -185,9 +189,13 @@ Pacf(seasonal_trend_model2$residuals, main="PACF")
 ------------------------------------------------------------------------
 
 ```{r, echo=FALSE}
+
+AIC <- c(format(AIC(trend_model)), format(AIC(seasonal_trend_model)), format(AIC(seasonal_trend_model2)))
+BIC <- c(format(BIC(trend_model)), format(BIC(seasonal_trend_model)), format(BIC(seasonal_trend_model2)))
+
 knitr::kable(
-  cbind(c("Trend", "Trend+Season", "Trend*Season"), c(summary(trend_model)$adj.r.squared, summary(seasonal_trend_model)$adj.r.squared, summary(seasonal_trend_model2)$adj.r.squared))
-, caption = 'Adj. R Squared of classical models.'
+  cbind(c("Trend", "Trend+Season", "Trend*Season"), AIC, BIC)
+, caption = 'Selection criteria of our 3 models'
 )
 dwtest(seasonal_trend_model2) 
 ```
@@ -255,7 +263,7 @@ apsrtable::apsrtable(ext_model, Sweave = TRUE, model.names=c("Externes Model"))
 
 Ordinal logistic regression with multiple categories
 
-```{r, fig.cap="A scatterplot.", echo=FALSE}
+```{r,  echo=FALSE}
 classes = read.csv("classes.csv", sep=";", dec=",")
 weeks = read.csv("weeks.csv", sep=";", dec=",")
 
@@ -293,7 +301,7 @@ df_1$dauer = df_1$dauer / df_1$ects
 
 Vorhersage der Note bei 4 ECTS:
 
-```{r, fig.cap="A scatterplot.", echo=FALSE}
+```{r,  echo=FALSE}
 
 model_1 = polr(note ~ ects , data=df_1, Hess=TRUE)
 #summary(model_1)
@@ -313,7 +321,7 @@ prediction_1 = predict(model_1, data.frame(ects = 4), type='prob')
 
 Vorhersage der Note bei 40h Lernaufwand pro ECTS (also insg. 120h) und 4 ECTS
 
-```{r, fig.cap="A scatterplot.", echo=FALSE}
+```{r,  echo=FALSE}
 model_2 = polr(note ~ dauer + ects, data=df_1, Hess=TRUE)
 #summary(model_2)
 ctable_2 = coef(summary(model_2))
@@ -331,7 +339,7 @@ prediction_2
 
 Vorhersage der Note bei 120h Lernaufwand
 
-```{r, fig.cap="A scatterplot.", echo=FALSE}
+```{r,  echo=FALSE}
 
 model_3 = polr(note ~ dauer, data=df_1, Hess=TRUE)
 #summary(model_3)
@@ -348,7 +356,7 @@ prediction_3
 
 ## Korrelationen
 
-```{r, fig.cap="A scatterplot.", echo=FALSE}
+```{r,  echo=FALSE}
 
 ###correlation zw ects/dauer/note
 c_dauer_note = cor(df_1$dauer, as.numeric(as.character(df_1$note)))
@@ -362,23 +370,23 @@ paste("Korrelation zwischen ECTS und Dauer:", round(c_ects_dauer, 4))
 
 ------------------------------------------------------------------------
 
-### Korrelation zwischen Youtube/Dauer/Temperatur/Puls
 
-```{r, fig.cap="A scatterplot.", echo=FALSE}
+
+```{r,  echo=FALSE}
 ### Lernaufwand pro ECTS
 
-df_2 = data.frame(Youtube = weeks$Youtube, Lernaufwand = weeks$Duration, Temp = weeks$Temp, Puls = weeks$HP)
-ind_rm = which(df_2$Lernaufwand =="")
-df_2 = df_2[-ind_rm, ]
+df_2 = data.frame(Youtube = weeks$Youtube, Lernaufwand = as.numeric(hms(weeks$Duration)), Temp = weeks$Temp, Puls = weeks$HP)
+#ind_rm = which(df_2$Lernaufwand =="")
+#df_2 = df_2[-ind_rm, ]
 ind_na = which(is.na(df_2$Puls), arr.ind=TRUE)
 df_2 = df_2[-ind_na, ]
 
-ind_h = regexpr(pattern=":", df_2$Lernaufwand) - 1
-stunden = as.numeric(substring(df_2$Lernaufwand, first=1, last=ind_h ))
-minuten = as.numeric(substring(df_2$Lernaufwand, first=ind_h+2, last=ind_h+3))
-duration_m = minuten + stunden * 60
+#ind_h = regexpr(pattern=":", df_2$Lernaufwand) - 1
+#stunden = as.numeric(substring(df_2$Lernaufwand, first=1, last=ind_h ))
+#minuten = as.numeric(substring(df_2$Lernaufwand, first=ind_h+2, last=ind_h+3))
+#duration_m = minuten + stunden * 60
 
-df_2$Lernaufwand = duration_m
+#df_2$Lernaufwand = duration_m
 
 corrs = cor(df_2)
 corrplot(corrs, method="circle")
@@ -389,14 +397,10 @@ corrplot(corrs, method="circle")
 
 ## Korrelation zwischen Youtube und Lernzeit pro Monat
 
-```{r, fig.cap="A scatterplot.", echo=FALSE}
+```{r,  echo=FALSE}
 
 
 df_3 = data.frame(dauer = weeks$Duration, monat = weeks$Month, yt = weeks$Youtube)
-
-ind_rm  = which(df_3$dauer == "")
-
-df_3 = df_3[-ind_rm, ]
 
 ind_h = regexpr(pattern=":", df_3$dauer) - 1
 stunden = as.numeric(substring(df_3$dauer, first=1, last=ind_h ))
@@ -437,4 +441,11 @@ text(labels=paste("correlation coefficient:", round(cor(dauer_sum, yt_sum), 4)),
 ## Vielen Dank für Ihre Aufmerksamkeit!
 - Wir freuen uns auf Ihre Fragen.
 
+--------------------------------------------------------------------------
+
+## Anhang Model 3 (Zeitreihenanalyse)
+
+```{r, echo=FALSE}
+coef(summary(seasonal_trend_model2))
+```
 
