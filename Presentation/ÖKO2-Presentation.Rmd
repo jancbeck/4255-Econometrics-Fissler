@@ -319,7 +319,7 @@ prediction_1 = predict(model_1, data.frame(ects = 4), type='prob')
 
 ## Model 2
 
-Vorhersage der Note bei 40h Lernaufwand pro ECTS (also insg. 120h) und 4 ECTS
+Vorhersage der Note bei 10h Lernaufwand pro ECTS (also insg. 40h) und 4 ECTS
 
 ```{r,  echo=FALSE}
 model_2 = polr(note ~ dauer + ects, data=df_1, Hess=TRUE)
@@ -337,7 +337,7 @@ prediction_2
 
 ## Model 3
 
-Vorhersage der Note bei 120h Lernaufwand
+Vorhersage der Note bei insgesamt 40h Lernaufwand
 
 ```{r,  echo=FALSE}
 
@@ -434,7 +434,7 @@ text(labels=paste("correlation coefficient:", round(cor(dauer_sum, yt_sum), 4)),
 ## Findings
 
 -   Sagt fast immer das Selbe aus, da es fast nur 1er und 2er gibt. Es können keine wirklichen Aussagen für sehr hohe oder sehr niedrige Stundenzahl an Lernaufwand oder ähnliches vorrausgesagt werden.
--   Mit insgesamt 120h Lernaufwand in einem Kurs mit 4 ects schreibt Jan mit einer Wahrscheinlichkeit von 57,24% eine Eins. Aber eine gewisse Verzerrung besteht, da die Noten prinzipiell immer eher besser ausfallen und der Datensatz nicht ausreichend ist um genaue Vorhersagen zu treffen.
+-   Für Ökonometrie 2 hat Jan ca. 50h gelernt und schreibt mit einer Wahrscheinlichkeit von 55% eine Eins. Aber eine gewisse Verzerrung besteht, da die Noten prinzipiell immer eher besser ausfallen und der Datensatz nicht ausreichend ist um genaue Vorhersagen zu treffen.
 
 --------------------------------------------------------------------------
 
