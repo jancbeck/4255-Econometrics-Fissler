@@ -208,7 +208,7 @@ dwtest(seasonal_trend_model2)
 
 ------------------------------------------------------------------------
 
-## Externe Variablen
+## Anhang: Externe Variablen
 
 ```{r, echo=FALSE}
 summary(cbind(weeks[5], weeks[7:9]))
@@ -217,7 +217,7 @@ summary(cbind(weeks[5], weeks[7:9]))
 
 ------------------------------------------------------------------------
 
-## Externe Variablen 
+## Anhang: Externe Variablen
 
 ```{r, echo=FALSE}
 par(mfrow=c(2,2))
@@ -296,7 +296,7 @@ Vorhersage der Note bei 4 ECTS:
 ```{r, fig.cap="A scatterplot.", echo=FALSE}
 
 model_1 = polr(note ~ ects , data=df_1, Hess=TRUE)
-summary(model_1)
+#summary(model_1)
 ctable_1 = coef(summary(model_1))
 p_1 = pnorm(abs(ctable_1[, "t value"]), lower.tail=FALSE) * 2
 ctable_1 = cbind(ctable_1, "pvalue" = p_1)
@@ -315,7 +315,7 @@ Vorhersage der Note bei 40h Lernaufwand pro ECTS (also insg. 120h) und 4 ECTS
 
 ```{r, fig.cap="A scatterplot.", echo=FALSE}
 model_2 = polr(note ~ dauer + ects, data=df_1, Hess=TRUE)
-summary(model_2)
+#summary(model_2)
 ctable_2 = coef(summary(model_2))
 p_2 = pnorm(abs(ctable_2[, "t value"]), lower.tail=FALSE) * 2
 ctable_2 = cbind(ctable_2, "pvalue" = p_2) ## idk why we get nan's -> no information about p value
@@ -429,5 +429,12 @@ text(labels=paste("correlation coefficient:", round(cor(dauer_sum, yt_sum), 4)),
 
 ## Findings
 
--   Sagt fast immer das Selbe aus, da es fast nur 1er und 2er gibt.Es können keine wirklichen Aussagen für sehr hohe oder sehr niedrige Stundenzahl an Lernaufwand oder ähnliches vorrausgesagt werden.
+-   Sagt fast immer das Selbe aus, da es fast nur 1er und 2er gibt. Es können keine wirklichen Aussagen für sehr hohe oder sehr niedrige Stundenzahl an Lernaufwand oder ähnliches vorrausgesagt werden.
 -   Mit insgesamt 120h Lernaufwand in einem Kurs mit 4 ects schreibt Jan mit einer Wahrscheinlichkeit von 57,24% eine Eins. Aber eine gewisse Verzerrung besteht, da die Noten prinzipiell immer eher besser ausfallen und der Datensatz nicht ausreichend ist um genaue Vorhersagen zu treffen.
+
+--------------------------------------------------------------------------
+
+## Vielen Dank für Ihre Aufmerksamkeit!
+- Wir freuen uns auf Ihre Fragen.
+
+
