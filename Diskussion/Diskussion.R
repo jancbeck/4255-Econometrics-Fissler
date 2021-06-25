@@ -1,0 +1,3 @@
+library("wooldridge")
+
+data('card')

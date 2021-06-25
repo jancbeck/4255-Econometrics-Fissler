@@ -240,8 +240,7 @@ plot(weeks$Weight.c, xlab="Wochen", ylab="(Über-)Gewicht", type="l")
 
 ```{r, echo=FALSE}
 weeks <- weeks[!(is.na(weeks$Duration) | weeks$Duration==""), ] # remove weeks with no Duration
-ext_model <- lm(Duration ~ Sunny + Youtube + HR.c + Weight.c, data=weeks)
-
+ext_model <- lm(Duration ~ Sunny + Youtube + HR.c + Weight.c + Aktiv, data=weeks)
 ```
 
 ```{r, results='asis', echo=FALSE}
